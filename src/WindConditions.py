@@ -46,7 +46,7 @@ class WindConditions:
     CP_AIR = 1005   # Specific heat of air [J kg-1 K-1]
     OMEGA = 7.2921159e-5    # angular speed of the Earth [rad/s]
     K = 0.41    # von Karman constant
-    
+    TIME_UNITS = "seconds since 1970-01-01 00:00:00.00 UTC"
 
 
     def __init__(self,filetend,latitude, longitude, siteID = None, datefrom = None , dateto = None):
@@ -66,7 +66,7 @@ class WindConditions:
         
         
         times = f.variables['Times'][:]
-        times = netCDF4.num2date(times,"seconds since 1970-01-01 00:00:00.00 UTC")
+        times = netCDF4.num2date(times,self.TIME_UNITS)
         
         mask = np.logical_and(times >= datefrom, times < dateto)
         
@@ -144,42 +144,49 @@ class WindConditions:
              self.data['Vadv'] [datefromplot:datetoplot].values.T,
              self.data['Ug'][datefromplot:datetoplot].values.T]
         Zvarname = ['$U$','$U_{adv}$','$U_{pg}$',
-                  '$V$','$V_{adv}$','$V_{pg}$']
-        Zlevels = np.linspace(-24,24,13, endpoint=True)
+          '$V$','$V_{adv}$','$V_{pg}$']
 
+        Zlevels = np.linspace(-24,24,13, endpoint=True)
+        
         taxis_label = 'Period: ' + datefromplot.strftime('%Y-%m-%d %H:%M') + ' to '+ datetoplot.strftime('%Y-%m-%d %H:%M')         
         zaxis_label = '$z$ [$m$]'
-        hoursFmt = mdates.DateFormatter('%d')
-
-        xrotor = np.array([mdates.date2num(datefromplot), mdates.date2num(datetoplot)])
-        ticks = np.asarray(pd.date_range(datefromplot,datetoplot,freq='24H'))
-
+        # hoursFmt = mdates.DateFormatter('%d')
+        
+        xrotor = np.array([netCDF4.date2num(datefromplot,self.TIME_UNITS), netCDF4.date2num(datetoplot,self.TIME_UNITS)])
+        
+        daysPlot=[(datefromplot + datetime.timedelta(i)).strftime("%d") 
+                  for  i in range((datetoplot - datefromplot).days + 1)]
+        
+        idaysPlot=[netCDF4.date2num(datefromplot + datetime.timedelta(i),self.TIME_UNITS) 
+                  for  i in range((datetoplot - datefromplot).days + 1)]
+        
         fig, ax = plt.subplots(2, 3, sharex='col', sharey='row', figsize=(8,5))
         Zcmap = plt.get_cmap('bwr') #bwr
+        
         for iax in range (0,6):
+            
             ix,iy = np.unravel_index(iax,(2,3))
             CF = ax[ix,iy].contourf(X,Y,Z[iax], Zlevels, cmap=Zcmap)
             ax[ix,iy].plot(xrotor,z_mark1,'--k')
             ax[ix,iy].plot(xrotor,z_mark2,'--k')
             ax[ix,iy].set_ylim([10, z_lim])
             ax[ix,iy].set_yscale('log')
-            ax[ix,iy].xaxis.set_major_formatter(hoursFmt)    
             ax[ix,iy].set_title(Zvarname[iax])
-            ax[ix,iy].set_xticks(ticks)
+            
+            if iax >= 3:
+                plt.sca(ax[ix,iy])
+                plt.xticks(idaysPlot,daysPlot, color='black')
+            
             
         ax[0,0].set_ylabel(zaxis_label); ax[1,0].set_ylabel(zaxis_label)
         ax[1,1].set_xlabel(taxis_label)
-
-        plt.setp([a.get_xticklabels() for a in ax[0, :]], visible=False)
-        plt.setp([a.get_yticklabels() for a in ax[:, 1]], visible=False)
-
+        
+        
         fig.subplots_adjust(right=0.92)
         cbar_ax = fig.add_axes([0.95, 0.12, 0.025, 0.75])
         cbar = fig.colorbar(CF, cax=cbar_ax)    
         cbar.ax.set_xlabel('[$m s^{-1}$]',labelpad = -290, x = 1.3)
 
-        #figname = siteID+'_tz.png'
-        #plt.savefig(figname, bbox_inches='tight', dpi=300)
 
     def plot_windrose(self, zref, datefromplot = None, datetoplot = None):
         # Plot windorse
