@@ -11,13 +11,9 @@ import matplotlib.cm as cm
 from scipy.interpolate import interp1d
 from scipy import stats
 
-
-
-
 def time_stamp(year,month,day,hour,minute,second):
-    """ Abstraction method for creating compatible time stampb"""
+    """ Abstraction method for creating compatible time stamps"""
     return datetime.datetime(year,month,day,hour,minute,second)   
-
 
 def timedelta_to_resample_string(timedelta):
     """
@@ -101,7 +97,30 @@ class WindConditions:
 
         # Replace with 10*RMOL (RMOL directly from WRF)
         self.data['zL0'] = 10./(- self.data['us']**3/(self.K*(self.G/self.data['T2'])*self.data['wt'])) # Stability parameter, reference to classify wind conditions 
+
+    def reduce_to_ts(self,time_series):
+        """ Reduce all the data to the provided time stamps"""
+        ts_set = set(time_series)
+        new_time = self.data['t'][:][self.data['t'][0].apply(lambda x: x in ts_set)].index.values
         
+        self.data['t'] = self.data['t'].reindex(new_time)
+        self.data['U'] =  self.data['U'].reindex(new_time)
+        self.data['V'] = self.data['V'].reindex(new_time)
+        self.data['Th'] = self.data['Th'].reindex(new_time)
+        self.data['us'] = self.data['us'].reindex(new_time)
+        self.data['wt'] = self.data['wt'].reindex(new_time)
+        self.data['T2'] = self.data['T2'].reindex(new_time)
+        self.data['TSK'] = self.data['TSK'].reindex(new_time)
+        self.data['Psfc'] = self.data['Psfc'].reindex(new_time)
+        self.data['Ug'] = self.data['Ug'].reindex(new_time)
+        self.data['Vg'] = self.data['Vg'].reindex(new_time)
+        self.data['Uadv'] = self.data['Uadv'].reindex(new_time)
+        self.data['Vadv'] = self.data['Vadv'].reindex(new_time)
+        self.data['Thadv'] = self.data['Thadv'].reindex(new_time)
+        self.data['S'] = self.data['S'].reindex(new_time)
+        self.data['WD'] = self.data['WD'].reindex(new_time)
+        self.data['zL0'] = self.data['zL0'].reindex(new_time)
+    
     def z_interp_data(self,var, datefrom, dateto, zref):
         res = interp1d(self.data['z'], self.data[var][self.data[var].columns.values][datefrom:dateto])(zref)
         return pd.DataFrame(res, index = self.data['t'][datefrom:dateto].index)
@@ -258,7 +277,8 @@ class WindConditions:
         return N_WDzL, N_SzL, N_zL, N_WD, S_WDzL
 
     def plot_stability(self,WDbins,WDbins_label,zLbins,zLbins_label,zref,min_S = -1, max_S = 999,datefromplot = None, datetoplot = None):
-        N_WDzL,N_SzL,N_zL,N_WD,S_WDzL = self.analyse_stability(WDbins,WDbins_label,zLbins,zLbins_label,zref,min_S,max_S,datefromplot, datetoplot)
+        N_WDzL,N_SzL,N_zL,N_WD,S_WDzL = self.analyse_stability(
+                                        WDbins,WDbins_label,zLbins,zLbins_label,zref,min_S,max_S,datefromplot, datetoplot)
         
         N_S = np.sum(N_SzL, axis = 1).rename('pdf')
         Nnorm_WDzL = N_WDzL.div(N_WD, axis=0)
