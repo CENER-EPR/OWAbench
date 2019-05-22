@@ -10,6 +10,73 @@ from windrose import WindroseAxes
 import matplotlib.cm as cm
 from scipy.interpolate import interp1d
 from scipy import stats
+import seaborn as sns
+from IPython.display import Markdown
+import xarray as xr
+
+def plot_wf_layout(x,y,labels = [], figsize=(8,8),data = [],vmin = np.nan,vmax = np.nan):
+    fig= plt.figure(figsize=figsize)
+    
+    #1D data - make a single plot
+    #if len(data.shape) == 1:
+    #main plot
+    if len(data)==0:
+        plt.scatter(x,y)
+    else:
+        if np.isnan(vmax):
+            vmax = np.nanmax(data)
+        if np.isnan(vmin):
+            vmin = np.nanmin(data)
+        
+        # blue white red plot centered on white
+        if vmin<0:
+            vmax = max(vmax,-vmin)
+            vmin = -vmax
+            cmap=plt.cm.get_cmap('bwr', 15)
+            sc = plt.scatter(x,y,marker='o',c=data,cmap=cmap,edgecolors ='k')
+        else:# jet plot
+            cmap=plt.cm.get_cmap('jet', 14)
+            sc = plt.scatter(x,y,c=data,cmap=cmap)
+        
+        plt.colorbar(sc)
+        plt.clim(vmin, vmax);
+
+    #labeled wind turbines    
+    for i in range(len(labels)):
+        plt.text(x[i]+0.4, y[i]+0.4, labels[i][3:], fontsize=9) #the labels prefix is removed
+    #else: #2D data - make multiplot
+    # TODO
+    plt.axis('scaled')
+    plt.show()
+
+def plot_transect(data,ref_data,wt_list,turbines,rot_d,figsize=(8,8)):
+    #compute distances
+    a = turbines.loc[turbines['VDC ID'] == wt_list[0],['X coordinate','X coordinate']].values.flatten()
+    dists = []
+    for wt in wt_list:
+        b = turbines.loc[turbines['VDC ID'] == wt,['X coordinate','X coordinate']].values.flatten()
+        dists.append(((a[0]-b[0])**2+(a[1]-b[1])**2)**0.5 / rot_d)
+    
+    
+    ref_data = ref_data.reindex(wt_list)
+    #ref_data_std = ref_data_max.reindex(wt_list)
+    f1, ax = plt.subplots(1,2,figsize = (10,4))
+
+    ax[0].scatter(turbines['X coordinate'],turbines['Y coordinate'],c=[x in wt_list for x in turbines['VDC ID']])
+    ax[0].axis('scaled')
+
+    for index, row in data.iterrows():
+        eta = row.reindex(wt_list)
+        ax[1].plot(dists,eta/eta[0])
+
+    #plt.errorbar(x, y, e, linestyle='None', marker='^')
+    ax[1].errorbar(dists,ref_data/ref_data[0], marker='^', linestyle='None')#,ref_data_std/ref_data[0])
+
+    legend = np.append(data.index.values, 'Ref')
+    _ = plt.legend(legend,loc='upper right')
+
+    plt.tight_layout()
+    plt.show()
 
 def restrict_to_ts(data, ts):
     return data[~data.index.duplicated()].reindex(ts).dropna()
@@ -24,13 +91,18 @@ class BinAvrg:
     Bin averaging class for analysis and plotting
     """
     
-    def __init__(self,datefrom, dateto, wd_bins, wd_bins_label, zL_bins, zL_bins_label):
+    def __init__(self,site_id,datefrom, dateto, wd_bins, wd_bins_label, zL_bins, zL_bins_label, wt_label,sim_id):
+        self.site_id = site_id
         self.datefrom = datefrom
         self.dateto = dateto
         self.wd_bins = wd_bins
         self.wd_bins_label = wd_bins_label
         self.zL_bins = zL_bins
         self.zL_bins_label = zL_bins_label
+        self.wt_label = wt_label
+        self.sim_id = sim_id
+        self.bin_size = {'wt':len(wt_label), 'wd':len(wd_bins_label),'zL':len(zL_bins_label),'sim':len(sim_id)}
+        self.labels =   {'wt':wt_label     , 'wd':wd_bins_label     ,'zL':zL_bins_label,     'sim':sim_id}
     
     def __create_bin_map(self, time, wd, zL):
         wd[wd>self.wd_bins[-1]] = wd[wd>self.wd_bins[-1]]-360
@@ -101,18 +173,101 @@ class BinAvrg:
             
         return timestamps_map
     
+    def array_init(self,dims):
+        # only accept 2 or 3 dim xarrays with 'wt', 'wd','zL','sim' dims
+        if len(dims)==1:
+            shape=(self.bin_size[dims[0]])
+        elif len(dims)==2:
+            shape=(self.bin_size[dims[0]], self.bin_size[dims[1]])
+        elif len(dims)==3:
+            shape=(self.bin_size[dims[0]], self.bin_size[dims[1]],self.bin_size[dims[2]])
+        else:
+            shape=(self.bin_size[dims[0]], self.bin_size[dims[1]],self.bin_size[dims[2]],self.bin_size[dims[3]])
+            
+        labels = {k:self.labels[k] for k in self.labels if k in dims}
+        data = np.empty(shape)
+        data.fill(np.nan)
+        data = xr.DataArray(data, coords=labels, dims=dims)
+        
+        #for simpler arrays it is better to use pandas
+        if len(dims)<2:
+            return data.to_pandas()
+        
+        return data
     
     def compute_mean(self, ts, ts_bin_map):
+        #clean up duplicates 
+        ts = ts[~ts.index.duplicated()]
         #create output arrays
         (n_wd_bins, n_stab_bins) = ts_bin_map.shape
         (_ , n_wt) = ts.shape
-        mean = np.empty((n_wt,n_wd_bins, n_stab_bins))
-        std = np.empty((n_wt,n_wd_bins, n_stab_bins))
+        
+        mean = self.array_init(('wt', 'wd','zL'))
+        
+        std = xr.DataArray(np.empty((n_wt,n_wd_bins, n_stab_bins)), 
+                            coords={'wt':self.wt_label, 'wd': self.wd_bins_label, 'zL':self.zL_bins_label}, 
+                            dims=('wt', 'wd','zL'))
         
         # compute std and mean
         for i_wd in range(n_wd_bins):
             for i_stab in range(n_stab_bins):
-                mean[:,i_wd,i_stab] = ts.loc[ts_bin_map[i_wd,i_stab]].mean()
-                std[:,i_wd,i_stab] = ts.loc[ts_bin_map[i_wd,i_stab]].std()
+                ts_bin = ts.reindex(ts_bin_map[i_wd,i_stab])
+                mean[:,i_wd,i_stab] = ts_bin.mean()
+                std[:,i_wd,i_stab] =  ts_bin.std()
         
         return mean, std
+    def plot_heatmaps(self,data,sub_plt_size = (1.7,4),n_plot_cols = 4, figcaption = '', title=''):
+        #remove empty simulations
+        #mask = [len(elem) != 0 for elem in data] 
+        #data = [data[i] for i in range(len(mask)) if mask[i]]
+        #sim_id = [sim_id[i] for i in range(len(mask)) if mask[i]]
+        sim_id = data.coords['sim'].values.flatten()
+        
+        
+        n_sim = len(data)
+
+        #Xlabel = '$WD_{ref}$'
+        #Ylabel =  '$z/L_0$'
+
+        max_data = np.nanmax(np.absolute(data))
+        z_levels = np.linspace(-max_data,max_data,14)
+        cmap = plt.get_cmap('bwr')
+
+        if n_sim < n_plot_cols:
+            n_plot_cols = n_sim
+
+        n_plot_rows = int(n_sim / n_plot_cols)
+        if n_plot_rows < (n_sim / n_plot_cols): 
+            n_plot_rows = n_plot_rows+1
+
+        figname = self.site_id+'_heatmaps.png'
+        fig, ax = plt.subplots(n_plot_rows, n_plot_cols, sharex='col', sharey='row', 
+                               figsize=(n_plot_cols*sub_plt_size[0] ,n_plot_rows*sub_plt_size[1]))
+
+        for iax in range (0,n_sim):
+            if n_plot_rows>1:
+                index = np.unravel_index(iax,(n_plot_rows,n_plot_cols))
+            else: 
+                index = iax
+            
+            #colour bar for the last plot in row
+            if iax%n_plot_cols == (n_plot_cols-1):
+                cbar = True
+            else:
+                cbar = False
+
+            sns.heatmap(data[iax].to_pandas(), ax = ax[index], cmap=cmap, 
+                    vmin=z_levels.min(), vmax=z_levels.max(),
+                    cbar_kws={'boundaries':z_levels},
+                    cbar=cbar,
+                    xticklabels = True, yticklabels=True,
+                    linewidths=.1)
+            ax[index].set_facecolor('grey')
+            ax[index].set_title(sim_id[iax]+title)
+
+        plt.tight_layout()
+        #plt.savefig(figname, dpi=300, bbox_inches='tight')
+
+        plt.show()
+
+        display(Markdown(figcaption))
