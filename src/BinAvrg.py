@@ -49,7 +49,7 @@ def plot_wf_layout(x,y,labels = [], figsize=(8,8),data = [],vmin = np.nan,vmax =
     plt.axis('scaled')
     plt.show()
 
-def plot_transect(data,ref_data,wt_list,turbines,rot_d,figsize=(8,8)):
+def plot_transect(data,ref_data,ref_data_max,wt_list,turbines,rot_d,figsize=(8,8)):
     #compute distances
     a = turbines.loc[turbines['VDC ID'] == wt_list[0],['X coordinate','X coordinate']].values.flatten()
     dists = []
@@ -59,7 +59,8 @@ def plot_transect(data,ref_data,wt_list,turbines,rot_d,figsize=(8,8)):
     
     
     ref_data = ref_data.reindex(wt_list)
-    #ref_data_std = ref_data_max.reindex(wt_list)
+    ref_data_std = ref_data_max.reindex(wt_list) - ref_data
+    ref_data_std[0] = 0
     f1, ax = plt.subplots(1,2,figsize = (10,4))
 
     ax[0].scatter(turbines['X coordinate'],turbines['Y coordinate'],c=[x in wt_list for x in turbines['VDC ID']])
@@ -70,7 +71,7 @@ def plot_transect(data,ref_data,wt_list,turbines,rot_d,figsize=(8,8)):
         ax[1].plot(dists,eta/eta[0])
 
     #plt.errorbar(x, y, e, linestyle='None', marker='^')
-    ax[1].errorbar(dists,ref_data/ref_data[0], marker='^', linestyle='None')#,ref_data_std/ref_data[0])
+    ax[1].errorbar(dists,ref_data/ref_data[0],ref_data_std/ref_data[0], marker='^', linestyle='None')
 
     legend = np.append(data.index.values, 'Ref')
     _ = plt.legend(legend,loc='upper right')

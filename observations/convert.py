@@ -10,8 +10,8 @@ import datetime
 
 
 # file paths
-input_filepath = 'Anholt_modelID_userID.csv'
-output_filepath = '../outputs/anhXX.csv'
+input_filepath = 'PwTableCorrected_60min.csv'
+output_filepath = '../processed_submissions/obs.csv'
 
 
 # read raw data
@@ -19,11 +19,14 @@ data = pd.read_csv(input_filepath, ',',
                    header = None,
                    skiprows = 1
                    ) 
+
+
 # fix headers
 turbines = pd.read_csv("../Anholt_layout.csv")
 var_names = turbines['VDC ID'].tolist()
 var_names.insert(0, 'time')
 data.rename(columns=lambda x: var_names[x], inplace=True)
+
 
 # fix time format
 def fix_time(time_str):
@@ -41,11 +44,36 @@ def fix_time(time_str):
 
 data['time'] = data['time'].apply(fix_time)
 
+
 # fix power format to MW
 out_data = data/1000
 out_data['time'] = data['time']
 
-
 # write outputs
 out_data.to_csv(output_filepath, index=False)
+
+######################################## flags
+# file paths
+input_filepath = 'PwTableFlags_60min.csv'
+output_filepath = '../processed_submissions/obs_flags.csv'
+
+
+# read raw data
+data = pd.read_csv(input_filepath, ',',
+                   header = None,
+                   skiprows = 1
+                   ) 
+
+
+# fix headers
+turbines = pd.read_csv("../Anholt_layout.csv")
+var_names = turbines['VDC ID'].tolist()
+var_names.insert(0, 'time')
+data.rename(columns=lambda x: var_names[x], inplace=True)
+
+# fix time format
+data['time'] = data['time'].apply(fix_time)
+
+# write outputs
+data.to_csv(output_filepath, index=False)
 
