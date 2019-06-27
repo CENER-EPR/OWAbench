@@ -13,71 +13,93 @@ from scipy import stats
 import seaborn as sns
 from IPython.display import Markdown
 import xarray as xr
-
-def plot_wf_layout(x,y,labels = [], figsize=(8,8),data = [],vmin = np.nan,vmax = np.nan):
-    fig= plt.figure(figsize=figsize)
+from matplotlib import ticker as mtick
     
-    #1D data - make a single plot
-    #if len(data.shape) == 1:
-    #main plot
+def plot_wf_layout(x,y,labels = [], figsize=(12,6),data = [],vmin = np.nan,vmax = np.nan):
     if len(data)==0:
+        fig, ax = plt.subplots(figsize=figsize)
         plt.scatter(x,y)
+        #labeled wind turbines    
+        for i in range(len(labels)):
+            plt.text(x[i]+0.4, y[i]+0.4, labels[i][3:], fontsize=9) #the labels prefix is removed
+        ax.set_aspect(1.0)
     else:
-        if np.isnan(vmax):
-            vmax = np.nanmax(data)
-        if np.isnan(vmin):
-            vmin = np.nanmin(data)
+        fig,ax = plt.subplots(1, 2, figsize=figsize)
+        for iax in range(len(data)):
+            if vmin[iax]<0:
+                cmap=plt.cm.get_cmap('bwr',16)
+                ax[iax].set_title('BIAS[%]')
+            else:
+                cmap=plt.cm.get_cmap('jet',10)
+                ax[iax].set_title('Array Eff.[%]')
+            sc = ax[iax].scatter(x,y,marker='o',c=data[iax],cmap=cmap,edgecolors ='k',vmin=vmin[iax], vmax=vmax[iax])
+            plt.colorbar(sc,ax=ax[iax])
+            ax[iax].set_aspect(1.0)
         
-        # blue white red plot centered on white
-        if vmin<0:
-            vmax = max(vmax,-vmin)
-            vmin = -vmax
-            cmap=plt.cm.get_cmap('bwr', 15)
-            sc = plt.scatter(x,y,marker='o',c=data,cmap=cmap,edgecolors ='k')
-        else:# jet plot
-            cmap=plt.cm.get_cmap('jet', 14)
-            sc = plt.scatter(x,y,c=data,cmap=cmap)
-        
-        plt.colorbar(sc)
-        plt.clim(vmin, vmax);
-
-    #labeled wind turbines    
-    for i in range(len(labels)):
-        plt.text(x[i]+0.4, y[i]+0.4, labels[i][3:], fontsize=9) #the labels prefix is removed
-    #else: #2D data - make multiplot
-    # TODO
-    plt.axis('scaled')
     plt.show()
 
-def plot_transect(data,ref_data,ref_data_max,wt_list,turbines,rot_d,figsize=(8,8)):
+def plot_transect(data,ref_data,meso_data,wt_list,turbines,rot_d,sim_name,WDbin,zLbin):
+    n_wt = len(wt_list)
+    
     #compute distances
-    a = turbines.loc[turbines['VDC ID'] == wt_list[0],['X coordinate','X coordinate']].values.flatten()
+    a = turbines.loc[turbines['VDC ID'] == wt_list[0],['X coordinate','Y coordinate']].values.flatten()
     dists = []
-    for wt in wt_list:
-        b = turbines.loc[turbines['VDC ID'] == wt,['X coordinate','X coordinate']].values.flatten()
+    coords = np.zeros((n_wt,2))
+    for wt in range(n_wt):
+        b = turbines.loc[turbines['VDC ID'] == wt_list[wt],['X coordinate','Y coordinate']].values.flatten()
         dists.append(((a[0]-b[0])**2+(a[1]-b[1])**2)**0.5 / rot_d)
-    
-    
+        coords[wt,:]=b
+        
     ref_data = ref_data.reindex(wt_list)
-    ref_data_std = ref_data_max.reindex(wt_list) - ref_data
-    ref_data_std[0] = 0
-    f1, ax = plt.subplots(1,2,figsize = (10,4))
-
-    ax[0].scatter(turbines['X coordinate'],turbines['Y coordinate'],c=[x in wt_list for x in turbines['VDC ID']])
+#    ref_data_std = ref_data_std.reindex(wt_list) 
+ 
+    f1, ax = plt.subplots(1,2,figsize = (14,5))
+    # plot layout highlighting the transect
+    iwt = [x in wt_list for x in turbines['VDC ID']]
+    ax[0].scatter(turbines['X coordinate'],turbines['Y coordinate'],c='silver', s=6)
+    ax[0].scatter(turbines['X coordinate'][iwt],turbines['Y coordinate'][iwt],c='black',s=6)
+    ax[0].text(coords[0][0],coords[0][1],wt_list[0],{'ha': 'right'})
+    ax[0].text(coords[-1][0],coords[-1][1],wt_list[-1],{'ha': 'right'})
     ax[0].axis('scaled')
+    ax[0].spines['top'].set_visible(False)
+    ax[0].spines['bottom'].set_visible(False)
+    ax[0].spines['left'].set_visible(False)
+    ax[0].spines['right'].set_visible(False)
+    ax[0].get_xaxis().set_ticks([])
+    ax[0].get_yaxis().set_ticks([])
 
+    #plot profiles of array efficiency ratio and mesoscale power ratio 
     for index, row in data.iterrows():
         eta = row.reindex(wt_list)
         ax[1].plot(dists,eta/eta[0])
+    ax[1].plot(dists,ref_data/ref_data[0], marker='s', markerfacecolor='silver', markeredgecolor= 'k')
+    ax[1].legend(np.append(sim_name, 'Ref'),bbox_to_anchor=(1.15, 1))
+    ax[1].set_ylim([0.4,1.2])    
+    ax[1].set_ylabel('$\eta/\eta_{0}$')
+    ax[1].set_title('Array efficiency ratio along transect '+wt_list[0]+'-'+wt_list[-1]+' ('+WDbin+', '+zLbin+')')
+    ax[1].grid(True)
+    for wt in range(n_wt):
+        ax[1].text(dists[wt],0.5,wt_list[wt],rotation=90.,color='k')
 
-    #plt.errorbar(x, y, e, linestyle='None', marker='^')
-    ax[1].errorbar(dists,ref_data/ref_data[0],ref_data_std/ref_data[0], marker='^', linestyle='None')
+    meso_P_ratio = meso_data.reindex(wt_list)
+    meso_P_ratio = meso_P_ratio/meso_P_ratio[0]
+    bx = ax[1].twinx()
+    bx.plot(dists,meso_P_ratio,'--b')
+    bx.set_ylabel('$(P_{0}/P)_{meso}$', color='b')
 
-    legend = np.append(data.index.values, 'Ref')
-    _ = plt.legend(legend,loc='upper right')
+    ax[1].yaxis.set_major_locator(mtick.LinearLocator(9))
+    bx.yaxis.set_major_locator(mtick.LinearLocator(9))
+
+#    plt.errorbar(x, y, e, linestyle='None', marker='^')
+#    x = dists
+#    y = ref_data/ref_data[0]
+#    e = ((1/ref_data[0]**2) * ref_data_std**2 + (ref_data**2/ref_data[0]**4) * ref_data_std[0]**2)**0.5 # asuuming independence     between ref_data and ref_data[0]
+#    ax[1].errorbar(x,y,e, marker='^', linestyle='None')
 
     plt.tight_layout()
     plt.show()
+  
+    return ax,bx
 
 def restrict_to_ts(data, ts):
     return data[~data.index.duplicated()].reindex(ts).dropna()
