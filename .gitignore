@@ -103,10 +103,34 @@ venv.bak/
 # mypy
 .mypy_cache/
 
-inputs/
+Anholt/inputs/
 
-observations/
+Anholt/observations/
 
-outputs/
+Anholt/outputs/
+
+Dudgeon/inputs/
+
+Dudgeon/observations/
+
+Dudgeon/outputs/
+
+Ormonde/inputs/
+
+Ormonde/observations/
+
+Ormonde/outputs/
+
+Rodsand2/inputs/
+
+Rodsand2/observations/
+
+Rodsand2/outputs/
+
+WestermostRough/inputs/
+
+WestermostRough/observations/
+
+WestermostRough/outputs/
 
 Untitled\.ipynb
