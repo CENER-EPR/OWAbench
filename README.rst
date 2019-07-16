@@ -23,11 +23,11 @@ Input and annonymized output data is available from the benchmark shared folder:
 https://b2drop.eudat.eu/s/6C8CgyqZe3E3btq 
 
 You can upload your formatted simulation data in the following "upload only" folders:
-* **Anholt**: https://b2drop.eudat.eu/s/5AEL5XdNR6NqSDZ
-* **Dudgeon**: https://b2drop.eudat.eu/s/oJkR6x7nrjxomPN
-* **Ormonde**: https://b2drop.eudat.eu/s/XsfJS7sB2YMrDLG
-* **Rodsand2**: https://b2drop.eudat.eu/s/mGgmfdgYZw9aR92
-* **Westermost Rough**: https://b2drop.eudat.eu/s/sZqxDbXkA4FTG9H
+* **Anholt**: https://b2drop.eudat.eu/s/5AEL5XdNR6NqSDZ.
+* **Dudgeon**: https://b2drop.eudat.eu/s/oJkR6x7nrjxomPN.
+* **Ormonde**: https://b2drop.eudat.eu/s/XsfJS7sB2YMrDLG.
+* **Rodsand2**: https://b2drop.eudat.eu/s/mGgmfdgYZw9aR92.
+* **Westermost Rough**: https://b2drop.eudat.eu/s/sZqxDbXkA4FTG9H.
 
 Your submissions will be checked for format compliance before adding them to the corresponding shared output folder. 
 
