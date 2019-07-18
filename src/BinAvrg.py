@@ -72,10 +72,12 @@ def plot_transect(data,ref_data,meso_data,wt_list,turbines,rot_d,sim_name,WDbin,
     for index, row in data.iterrows():
         eta = row.reindex(wt_list)
         ax[1].plot(dists,eta/eta[0])
-    ax[1].plot(dists,ref_data/ref_data[0], marker='s', markerfacecolor='silver', markeredgecolor= 'k')
+    ax[1].plot(dists,ref_data/ref_data[0], marker='s', markerfacecolor='silver', 
+               markeredgecolor= 'k', color = 'k', linestyle='--')
     ax[1].legend(np.append(sim_name, 'Ref'),bbox_to_anchor=(1.15, 1))
     ax[1].set_ylim([0.4,1.2])    
     ax[1].set_ylabel('$\eta/\eta_{0}$')
+    ax[1].set_xlabel('Distance from first turbine (D)')
     ax[1].set_title('Array efficiency ratio along transect '+wt_list[0]+'-'+wt_list[-1]+' ('+WDbin+', '+zLbin+')')
     ax[1].grid(True)
     for wt in range(n_wt):
