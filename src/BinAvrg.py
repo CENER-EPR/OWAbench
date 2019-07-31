@@ -15,14 +15,19 @@ from IPython.display import Markdown
 import xarray as xr
 from matplotlib import ticker as mtick
     
-def plot_wf_layout(x,y,labels = [], figsize=(12,6),data = [],vmin = np.nan,vmax = np.nan):
+def plot_wf_layout(x,y,labels = [],figsize=(12,6), data = [],vmin = np.nan,vmax = np.nan):
     if len(data)==0:
         fig, ax = plt.subplots(figsize=figsize)
         plt.scatter(x,y)
         #labeled wind turbines    
         for i in range(len(labels)):
-            plt.text(x[i]+0.4, y[i]+0.4, labels[i][3:], fontsize=9) #the labels prefix is removed
+            plt.text(x[i]+0.4, y[i]+0.4, labels[i], fontsize=9) 
         ax.set_aspect(1.0)
+        ax.set_xlabel('X [m]')
+        ax.set_ylabel('Y [m]')
+        ax.grid()
+        ax.axis('equal')
+        ax.axis([min(x)-5000, max(x)+2000,min(y)-2000, max(y)+2000])
     else:
         fig,ax = plt.subplots(1, 2, figsize=figsize)
         for iax in range(len(data)):
@@ -35,8 +40,18 @@ def plot_wf_layout(x,y,labels = [], figsize=(12,6),data = [],vmin = np.nan,vmax 
             sc = ax[iax].scatter(x,y,marker='o',c=data[iax],cmap=cmap,edgecolors ='k',vmin=vmin[iax], vmax=vmax[iax])
             plt.colorbar(sc,ax=ax[iax])
             ax[iax].set_aspect(1.0)
-        
+            ax[iax].set_xlabel('X [m]')
+            ax[iax].set_ylabel('Y [m]')
+            ax[iax].grid()
+
+    plt.axis('equal')
     plt.show()
+
+def centroid(arr):
+    length = arr.shape[0]
+    sum_x = np.sum(arr[:, 0])
+    sum_y = np.sum(arr[:, 1])
+    return sum_x/length, sum_y/length
 
 def plot_transect(data,ref_data,meso_data,wt_list,turbines,rot_d,sim_name,WDbin,zLbin):
     n_wt = len(wt_list)
