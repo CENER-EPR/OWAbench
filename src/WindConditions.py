@@ -45,11 +45,11 @@ class WindConditions:
     TIME_UNITS = "seconds since 1970-01-01 00:00:00.00 UTC"
 
 
-    def __init__(self,filetend,latitude, longitude, siteID = None, datefrom = None , dateto = None):
+    def __init__(self,filetend, siteID = None, datefrom = None , dateto = None):
         self.siteID = siteID
-        self.latitude = latitude      # degrees N 
-        self.longitude = longitude      # degrees E
-        self.coriolis_parameter  = 2*self.OMEGA*np.sin(self.latitude*np.pi/180) 
+        #self.latitude = latitude      # degrees N 
+        #self.longitude = longitude      # degrees E
+        #self.coriolis_parameter  = 2*self.OMEGA*np.sin(self.latitude*np.pi/180) 
         self.data = {}
         
         
