@@ -102,7 +102,7 @@ def plot_transect(data,ref_data,meso_data,wt_list,turbines,rot_d,sim_name,WDbin,
     meso_P_ratio = meso_P_ratio/meso_P_ratio[0]
     bx = ax[1].twinx()
     bx.plot(dists,meso_P_ratio,'--b')
-    bx.set_ylabel('$(P_{0}/P)_{meso}$', color='b')
+    bx.set_ylabel('$(P/P_{0})_{meso}$', color='b')
 
     ax[1].yaxis.set_major_locator(mtick.LinearLocator(9))
     bx.yaxis.set_major_locator(mtick.LinearLocator(9))
