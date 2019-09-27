@@ -44,7 +44,6 @@ def plot_wf_layout(x,y,labels = [],figsize=(12,6), data = [],vmin = np.nan,vmax 
             ax[iax].set_ylabel('Y [m]')
             ax[iax].grid()
 
-    plt.axis('equal')
     plt.show()
 
 def centroid(arr):
@@ -100,9 +99,9 @@ def plot_transect(data,ref_data,meso_data,wt_list,turbines,rot_d,sim_name,WDbin,
                markeredgecolor= 'k', color = 'k', linestyle='--', label = 'Ref')
     ax[1].legend(bbox_to_anchor=(1.15, 1))
     ax[1].set_ylim([0.4,1.2])    
-    ax[1].set_ylabel('$\eta/\eta_{0}$')
+    ax[1].set_ylabel('Array Efficiency Ratio: $\eta/\eta_{0} = [P/P_0]_{micro}*[P(S_0)/P(S)]_{meso}$')
     ax[1].set_xlabel('Distance from first turbine (D)')
-    ax[1].set_title('Array efficiency ratio along transect '+wt_list[0]+'-'+wt_list[-1]+' ('+WDbin+', '+zLbin+')')
+    ax[1].set_title('Transect '+wt_list[0]+'-'+wt_list[-1]+' ('+WDbin+', '+zLbin+')')
     ax[1].grid(True)
     for wt in range(n_wt):
         ax[1].text(dists[wt],0.5,wt_list[wt],rotation=90.,color='k')
@@ -111,7 +110,7 @@ def plot_transect(data,ref_data,meso_data,wt_list,turbines,rot_d,sim_name,WDbin,
     meso_P_ratio = meso_P_ratio/meso_P_ratio[0]
     bx = ax[1].twinx()
     bx.plot(dists,meso_P_ratio,'--b')
-    bx.set_ylabel('$[P(S)/P_{S_0}]_{meso}$', color='b')
+    bx.set_ylabel('Mesoscale Gross Power Ratio: $[P(S)/P_{S_0}]_{meso}$', color='b')
 
     ax[1].yaxis.set_major_locator(mtick.LinearLocator(9))
     bx.yaxis.set_major_locator(mtick.LinearLocator(9))
