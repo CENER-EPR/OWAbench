@@ -10,8 +10,8 @@ import datetime
 
 
 # file paths
-input_filepath = '~/Downloads/Anholt_windPRO-PARK2-WDCstabilitySlope2.5WDC(1)=0.045_EMD.csv'
-output_filepath = 'anhXX.csv'
+input_filepath = 'Anholt_windPRO-PARK2-WDCstabilitySlope2.5WDC(0)=0.045Limits-0,02-0,1_EMD.csv'
+output_filepath = 'anh05e.csv'
 
 
 # read raw data
