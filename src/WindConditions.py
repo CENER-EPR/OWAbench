@@ -1,4 +1,5 @@
 import sys
+import os
 import numpy as np
 import matplotlib.pyplot as plt
 import matplotlib.dates as mdates
@@ -45,7 +46,7 @@ class WindConditions:
     TIME_UNITS = "seconds since 1970-01-01 00:00:00.00 UTC"
 
 
-    def __init__(self,filetend, siteID = None, datefrom = None , dateto = None):
+    def __init__(self,filetend, siteID = None, datefrom = None , dateto = None, filetype = 'profile'):
         self.siteID = siteID
         #self.latitude = latitude      # degrees N 
         #self.longitude = longitude      # degrees E
@@ -53,73 +54,102 @@ class WindConditions:
         self.data = {}
         
         
-        self.__read_inputs(filetend, datefrom, dateto)
+        self.__read_inputs(filetend, datefrom, dateto, filetype)
         
         
-    def __read_inputs(self,filetend, datefrom, dateto):
-        f = netCDF4.Dataset(filetend, 'r')
-        
-        
-        
-        times = f.variables['Times'][:]
-        times = netCDF4.num2date(times,self.TIME_UNITS)
-        
-        mask = np.logical_and(times >= datefrom, times < dateto)
-        
-        idates = np.where(mask)[0]     
-        times= times[mask]
-        
-        sampling_time = timedelta_to_resample_string(times[1] - times[0])
-         
-        z = f.variables['height'][:]
-        self.data['z'] = z
-        
-        self.data['t'] = pd.DataFrame(f.variables['Times'][idates], index = times).resample(sampling_time).mean()       
-        self.data['U'] = pd.DataFrame(f.variables['U'][idates,:], index = times, columns = z).resample(sampling_time).mean() 
-        self.data['V'] = pd.DataFrame(f.variables['V'][idates,:], index = times, columns = z).resample(sampling_time).mean() 
-        self.data['Th'] = pd.DataFrame(f.variables['POT'][idates,:], index = times, columns = z).resample(sampling_time).mean() 
-        self.data['us'] = pd.DataFrame(f.variables['UST'][idates], index = times).resample(sampling_time).mean() 
-        self.data['wt'] = pd.DataFrame(f.variables['wt'][idates], index = times).resample(sampling_time).mean() 
-        self.data['T2'] = pd.DataFrame(f.variables['T2'][idates], index = times).resample(sampling_time).mean() 
-        self.data['TSK'] = pd.DataFrame(f.variables['TSK'][idates], index = times).resample(sampling_time).mean() 
-        self.data['Psfc'] = pd.DataFrame(f.variables['PSFC'][idates], index = times).resample(sampling_time).mean() 
-        self.data['Ug'] = pd.DataFrame(f.variables['Ug'][idates], index = times, columns = z).resample(sampling_time).mean() 
-        self.data['Vg'] = pd.DataFrame(f.variables['Vg'][idates], index = times, columns = z).resample(sampling_time).mean() 
-        self.data['Uadv'] = pd.DataFrame(f.variables['UADV'][idates], index = times, columns = z).resample(sampling_time).mean() 
-        self.data['Vadv'] = pd.DataFrame(f.variables['VADV'][idates], index = times, columns = z).resample(sampling_time).mean() 
-        self.data['Thadv'] = pd.DataFrame(f.variables['POT_ADV'][idates], index = times, columns = z).resample(sampling_time).mean() 
-        f.close()
-        #Nz = len(z)
+    def __read_inputs(self,file, datefrom, dateto, filetype):
+        if not(os.path.isfile(file)):
+            print(file + 'does not exist')
+        else:
+            f = netCDF4.Dataset(file, 'r')
+            times = f.variables['Times'][:]
+            times = netCDF4.num2date(times,self.TIME_UNITS)
+            mask = np.logical_and(times >= datefrom, times < dateto)
+            idates = np.where(mask)[0]
+            times= times[mask]
+            sampling_time = timedelta_to_resample_string(times[1] - times[0])
+            
+            if filetype == 'profile':
+                z = f.variables['height'][:]
+                self.data['z'] = z
+                self.data['t'] = pd.DataFrame(f.variables['Times'][idates], index = times).resample(sampling_time).mean()       
+                self.data['U'] = pd.DataFrame(f.variables['U'][idates,:], index = times, columns = z).resample(sampling_time).mean() 
+                self.data['V'] = pd.DataFrame(f.variables['V'][idates,:], index = times, columns = z).resample(sampling_time).mean() 
+                self.data['Th'] = pd.DataFrame(f.variables['POT'][idates,:], index = times, columns = z).resample(sampling_time).mean() 
+                self.data['us'] = pd.DataFrame(f.variables['UST'][idates], index = times).resample(sampling_time).mean() 
+                self.data['wt'] = pd.DataFrame(f.variables['wt'][idates], index = times).resample(sampling_time).mean() 
+                self.data['T2'] = pd.DataFrame(f.variables['T2'][idates], index = times).resample(sampling_time).mean() 
+                self.data['TSK'] = pd.DataFrame(f.variables['TSK'][idates], index = times).resample(sampling_time).mean() 
+                self.data['Psfc'] = pd.DataFrame(f.variables['PSFC'][idates], index = times).resample(sampling_time).mean() 
+                self.data['Ug'] = pd.DataFrame(f.variables['Ug'][idates], index = times, columns = z).resample(sampling_time).mean() 
+                self.data['Vg'] = pd.DataFrame(f.variables['Vg'][idates], index = times, columns = z).resample(sampling_time).mean() 
+                self.data['Uadv'] = pd.DataFrame(f.variables['UADV'][idates], index = times, columns = z).resample(sampling_time).mean() 
+                self.data['Vadv'] = pd.DataFrame(f.variables['VADV'][idates], index = times, columns = z).resample(sampling_time).mean() 
+                self.data['Thadv'] = pd.DataFrame(f.variables['POT_ADV'][idates], index = times, columns = z).resample(sampling_time).mean() 
+                f.close()
+                #Nz = len(z)
+                self.data['S'] = (self.data['U']**2 + self.data['V']**2)**0.5
+                self.data['WD'] = 180. + np.arctan2(self.data['U'],self.data['V'])*180./np.pi
 
+                # Replace with 10*RMOL (RMOL directly from WRF)
+                self.data['zL0'] = 10./(- self.data['us']**3/(self.K*(self.G/self.data['T2'])*self.data['wt'])) # Stability parameter, reference to classify wind conditions 
+            elif filetype == 'point':
+                self.data['t'] = pd.DataFrame(f.variables['Times'][idates], index = times).resample(sampling_time).mean()       
+                self.data['U'] = pd.DataFrame(f.variables['U'][idates], index = times).resample(sampling_time).mean() 
+                self.data['V'] = pd.DataFrame(f.variables['V'][idates], index = times).resample(sampling_time).mean() 
+                self.data['TKE'] = pd.DataFrame(f.variables['TKE'][idates], index = times).resample(sampling_time).mean() 
+                self.data['us'] = pd.DataFrame(f.variables['UST'][idates], index = times).resample(sampling_time).mean() 
+                self.data['HFX'] = pd.DataFrame(f.variables['HFX'][idates], index = times).resample(sampling_time).mean() 
+                self.data['T2'] = pd.DataFrame(f.variables['T2'][idates], index = times).resample(sampling_time).mean() 
+                self.data['TSK'] = pd.DataFrame(f.variables['TSK'][idates], index = times).resample(sampling_time).mean() 
+                self.data['POT'] = pd.DataFrame(f.variables['POT'][idates], index = times).resample(sampling_time).mean() 
+                self.data['zL0'] = 10./pd.DataFrame(f.variables['L'][idates], index = times).resample(sampling_time).mean() 
+                f.close()
+                self.data['S'] = (self.data['U']**2 + self.data['V']**2)**0.5
+                self.data['WD'] = 180. + np.arctan2(self.data['U'],self.data['V'])*180./np.pi
+            else:
+                print('filetype not valid')
+            
 
-        self.data['S'] = (self.data['U']**2 + self.data['V']**2)**0.5
-        self.data['WD'] = 180. + np.arctan2(self.data['U'],self.data['V'])*180./np.pi
-
-        # Replace with 10*RMOL (RMOL directly from WRF)
-        self.data['zL0'] = 10./(- self.data['us']**3/(self.K*(self.G/self.data['T2'])*self.data['wt'])) # Stability parameter, reference to classify wind conditions 
-
-    def reduce_to_ts(self,time_series):
+    def reduce_to_ts(self,time_series, filetype):
         """ Reduce all the data to the provided time stamps"""
         ts_set = set(time_series)
         new_time = self.data['t'][:][self.data['t'][0].apply(lambda x: x in ts_set)].index.values
         
-        self.data['t'] = self.data['t'].reindex(new_time)
-        self.data['U'] =  self.data['U'].reindex(new_time)
-        self.data['V'] = self.data['V'].reindex(new_time)
-        self.data['Th'] = self.data['Th'].reindex(new_time)
-        self.data['us'] = self.data['us'].reindex(new_time)
-        self.data['wt'] = self.data['wt'].reindex(new_time)
-        self.data['T2'] = self.data['T2'].reindex(new_time)
-        self.data['TSK'] = self.data['TSK'].reindex(new_time)
-        self.data['Psfc'] = self.data['Psfc'].reindex(new_time)
-        self.data['Ug'] = self.data['Ug'].reindex(new_time)
-        self.data['Vg'] = self.data['Vg'].reindex(new_time)
-        self.data['Uadv'] = self.data['Uadv'].reindex(new_time)
-        self.data['Vadv'] = self.data['Vadv'].reindex(new_time)
-        self.data['Thadv'] = self.data['Thadv'].reindex(new_time)
-        self.data['S'] = self.data['S'].reindex(new_time)
-        self.data['WD'] = self.data['WD'].reindex(new_time)
-        self.data['zL0'] = self.data['zL0'].reindex(new_time)
+        if filetype == 'profile':
+            self.data['t'] = self.data['t'].reindex(new_time)
+            self.data['U'] =  self.data['U'].reindex(new_time)
+            self.data['V'] = self.data['V'].reindex(new_time)
+            self.data['Th'] = self.data['Th'].reindex(new_time)
+            self.data['us'] = self.data['us'].reindex(new_time)
+            self.data['wt'] = self.data['wt'].reindex(new_time)
+            self.data['T2'] = self.data['T2'].reindex(new_time)
+            self.data['TSK'] = self.data['TSK'].reindex(new_time)
+            self.data['Psfc'] = self.data['Psfc'].reindex(new_time)
+            self.data['Ug'] = self.data['Ug'].reindex(new_time)
+            self.data['Vg'] = self.data['Vg'].reindex(new_time)
+            self.data['Uadv'] = self.data['Uadv'].reindex(new_time)
+            self.data['Vadv'] = self.data['Vadv'].reindex(new_time)
+            self.data['Thadv'] = self.data['Thadv'].reindex(new_time)
+            self.data['S'] = self.data['S'].reindex(new_time)
+            self.data['WD'] = self.data['WD'].reindex(new_time)
+            self.data['zL0'] = self.data['zL0'].reindex(new_time)
+        elif filetype == 'point':
+            self.data['t'] = self.data['t'].reindex(new_time)
+            self.data['U'] =  self.data['U'].reindex(new_time)
+            self.data['V'] = self.data['V'].reindex(new_time)
+            self.data['us'] = self.data['us'].reindex(new_time)
+            self.data['TKE'] = self.data['TKE'].reindex(new_time)
+            self.data['HFX'] = self.data['HFX'].reindex(new_time)
+            self.data['T2'] = self.data['T2'].reindex(new_time)
+            self.data['TSK'] = self.data['TSK'].reindex(new_time)
+            self.data['POT'] = self.data['POT'].reindex(new_time)
+            self.data['S'] = self.data['S'].reindex(new_time)
+            self.data['WD'] = self.data['WD'].reindex(new_time)
+            self.data['zL0'] = self.data['zL0'].reindex(new_time)
+        else:
+            print('filetype not valid')
+                
     
     def z_interp_data(self,var, datefrom, dateto, zref):
         res = interp1d(self.data['z'], self.data[var][self.data[var].columns.values][datefrom:dateto])(zref)
@@ -237,10 +267,15 @@ class WindConditions:
         Sbins_label = Sbins[0:-1]+1
 
         #fetch all the data
-        S = self.z_interp_data('S', datefromplot, datetoplot, zref)[0]
-        WD = self.z_interp_data('WD', datefromplot, datetoplot, zref)[0]
+        if not zref:
+            S = self.data['S'][datefromplot:datetoplot]
+            WD = self.data['WD'][datefromplot:datetoplot]
+        else:
+            S = self.z_interp_data('S', datefromplot, datetoplot, zref)[0]
+            WD = self.z_interp_data('WD', datefromplot, datetoplot, zref)[0]
+        
         zL0 = self.data['zL0'][datefromplot:datetoplot]
-
+        
         clean_data = pd.concat([S ,WD,zL0], axis = 1, keys = ['S','WD','zL0']).dropna()
         s_in_range =  np.logical_and(clean_data['S'][0] >= min_S , clean_data['S'][0] <= max_S)
         

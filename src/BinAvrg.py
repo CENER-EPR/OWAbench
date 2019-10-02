@@ -110,7 +110,7 @@ def plot_transect(data,ref_data,meso_data,wt_list,turbines,rot_d,sim_name,WDbin,
     meso_P_ratio = meso_P_ratio/meso_P_ratio[0]
     bx = ax[1].twinx()
     bx.plot(dists,meso_P_ratio,'--b')
-    bx.set_ylabel('Mesoscale Gross Power Ratio: $[P(S)/P_{S_0}]_{meso}$', color='b')
+    bx.set_ylabel('Mesoscale Gross Power Ratio: $[P(S)/P(S_0)]_{meso}$', color='b')
 
     ax[1].yaxis.set_major_locator(mtick.LinearLocator(9))
     bx.yaxis.set_major_locator(mtick.LinearLocator(9))
@@ -167,9 +167,13 @@ class BinAvrg:
     def filter_s(self, mast, zref, scada_ts, s_bins):
         # get time
         time = mast.data['t'][self.datefrom:self.dateto].values.flatten()
-
+        
         #get speed
-        s = (mast.z_interp_data('S', self.datefrom, self.dateto, zref)).values.flatten()
+        if not zref:  # point 
+            s = mast.data['S'].values.flatten()
+        else:         # profile 
+            s = (mast.z_interp_data('S', self.datefrom, self.dateto, zref)).values.flatten()
+            
         s = pd.Series( s, time)
         
         # filter out speed restrictions
@@ -197,8 +201,12 @@ class BinAvrg:
         time = mast.data['t'][self.datefrom:self.dateto].values.flatten()
         
         # create bins map
-        wd = (mast.z_interp_data('WD', self.datefrom, self.dateto, zref)).values.flatten()
-        zL = (mast.data['zL0'][self.datefrom:self.dateto]).values.flatten()
+        if not zref:
+            wd = mast.data['WD'][self.datefrom:self.dateto].values.flatten()
+            zL = mast.data['zL0'][self.datefrom:self.dateto].values.flatten()
+        else:
+            wd = (mast.z_interp_data('WD', self.datefrom, self.dateto, zref)).values.flatten()
+            zL = (mast.data['zL0'][self.datefrom:self.dateto]).values.flatten()
 
         map_array = self.__create_bin_map(time, wd, zL)
 
