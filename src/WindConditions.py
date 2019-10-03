@@ -152,7 +152,10 @@ class WindConditions:
                 
     
     def z_interp_data(self,var, datefrom, dateto, zref):
-        res = interp1d(self.data['z'], self.data[var][self.data[var].columns.values][datefrom:dateto])(zref)
+        if var == 'WD':
+            res = interp1d(self.data['z'], self.data[var][self.data[var].columns.values][datefrom:dateto],kind = 'nearest')(zref)
+        else:
+            res = interp1d(self.data['z'], self.data[var][self.data[var].columns.values][datefrom:dateto])(zref)
         return pd.DataFrame(res, index = self.data['t'][datefrom:dateto].index)
         
     def plot_timeseries(self,datefromplot,datetoplot,zref):

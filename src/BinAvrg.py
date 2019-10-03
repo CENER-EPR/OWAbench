@@ -52,7 +52,7 @@ def centroid(arr):
     sum_y = np.sum(arr[:, 1])
     return sum_x/length, sum_y/length
 
-def plot_transect(data,ref_data,meso_data,wt_list,turbines,rot_d,sim_name,WDbin,zLbin,highlight):
+def plot_transect(data,ref_data,meso_data,wt_list,turbines,rot_d,sim_name,WDbin,zLbin,highlight,typeplot='eta'):
     n_wt = len(wt_list)
     
     #compute distances
@@ -82,24 +82,26 @@ def plot_transect(data,ref_data,meso_data,wt_list,turbines,rot_d,sim_name,WDbin,
     ax[0].get_xaxis().set_ticks([])
     ax[0].get_yaxis().set_ticks([])
 
-    #plot profiles of array efficiency ratio and mesoscale power ratio 
-#    for index, row in data.iterrows():
-#        eta = row.reindex(wt_list)
-#        ax[1].plot(dists,eta/eta[0])
+    #plot profiles of net power and gross (mesoscale) power ratio 
     for index, row in data.iterrows():
         rownumber = np.where(data.index==index)[0][0]
-        eta = row.reindex(wt_list)
+        ratio = row.reindex(wt_list)
         if index in highlight:
-            ax[1].plot(dists,eta/eta[0], linewidth = 2, label = sim_name[rownumber])
+            ax[1].plot(dists,ratio/ratio[0], linewidth = 2, label = sim_name[rownumber])
         elif index == 'ensemble':
-            ax[1].plot(dists,eta/eta[0], linewidth = 2, color = 'r', label = sim_name[rownumber])
+            ax[1].plot(dists,ratio/ratio[0], linewidth = 2, color = 'r', label = sim_name[rownumber])
         else:
-            ax[1].plot(dists,eta/eta[0], color = 'silver', label = sim_name[rownumber])    
+            ax[1].plot(dists,ratio/ratio[0], color = 'silver', label = sim_name[rownumber])    
     ax[1].plot(dists,ref_data/ref_data[0], marker='s', markerfacecolor='grey', 
                markeredgecolor= 'k', color = 'k', linestyle='--', label = 'Ref')
     ax[1].legend(bbox_to_anchor=(1.15, 1))
     ax[1].set_ylim([0.4,1.2])    
-    ax[1].set_ylabel('Array Efficiency Ratio: $\eta/\eta_{0} = [P/P_0]_{micro}*[P(S_0)/P(S)]_{meso}$')
+    if typeplot == 'eta':
+        ax[1].set_ylabel('Array Efficiency Ratio: $\eta/\eta_{0} = [P/P_0]_{micro}*[P(S_0)/P(S)]_{meso}$')
+    elif typeplot == 'P':
+        ax[1].set_ylabel('Net Power Ratio: $P/P_0$')  
+    else:
+        ax[1].set_ylabel('Y')  
     ax[1].set_xlabel('Distance from first turbine (D)')
     ax[1].set_title('Transect '+wt_list[0]+'-'+wt_list[-1]+' ('+WDbin+', '+zLbin+')')
     ax[1].grid(True)
@@ -110,7 +112,7 @@ def plot_transect(data,ref_data,meso_data,wt_list,turbines,rot_d,sim_name,WDbin,
     meso_P_ratio = meso_P_ratio/meso_P_ratio[0]
     bx = ax[1].twinx()
     bx.plot(dists,meso_P_ratio,'--b')
-    bx.set_ylabel('Mesoscale Gross Power Ratio: $[P(S)/P(S_0)]_{meso}$', color='b')
+    bx.set_ylabel('Mesoscale Gross Power Ratio: $P(S)/P(S_0)$', color='b')
 
     ax[1].yaxis.set_major_locator(mtick.LinearLocator(9))
     bx.yaxis.set_major_locator(mtick.LinearLocator(9))
