@@ -81,7 +81,7 @@ def plot_transect(data,ref_data,meso_data,wt_list,turbines,rot_d,sim_name,WDbin,
     ax[0].spines['right'].set_visible(False)
     ax[0].get_xaxis().set_ticks([])
     ax[0].get_yaxis().set_ticks([])
-
+       
     #plot profiles of net power and gross (mesoscale) power ratio 
     for index, row in data.iterrows():
         rownumber = np.where(data.index==index)[0][0]
