@@ -52,7 +52,7 @@ def centroid(arr):
     sum_y = np.sum(arr[:, 1])
     return sum_x/length, sum_y/length
 
-def plot_transect(data,ref_data,meso_data,wt_list,turbines,rot_d,sim_name,WDbin,zLbin,highlight,typeplot='eta'):
+def plot_transect(data,ref_data,meso_data,wt_list,turbines,rot_d,sim_name,WDbin,zLbin,highlight,typeplot='eta',ylim = [0.4,1.2]):
     n_wt = len(wt_list)
     
     #compute distances
@@ -95,7 +95,7 @@ def plot_transect(data,ref_data,meso_data,wt_list,turbines,rot_d,sim_name,WDbin,
     ax[1].plot(dists,ref_data/ref_data[0], marker='s', markerfacecolor='grey', 
                markeredgecolor= 'k', color = 'k', linestyle='--', label = 'Ref')
     ax[1].legend(bbox_to_anchor=(1.15, 1))
-    ax[1].set_ylim([0.4,1.2])    
+    ax[1].set_ylim(ylim)    
     if typeplot == 'eta':
         ax[1].set_ylabel('Array Efficiency Ratio: $\eta/\eta_{0} = [P/P_0]_{micro}*[P(S_0)/P(S)]_{meso}$')
     elif typeplot == 'P':
