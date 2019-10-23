@@ -52,22 +52,19 @@ def centroid(arr):
     sum_y = np.sum(arr[:, 1])
     return sum_x/length, sum_y/length
 
-def plot_transect(data,ref_data,meso_data,wt_list,turbines,rot_d,sim_name,WDbin,zLbin,highlight,typeplot='eta',ylim = [0.4,1.2]):
+def plot_transect(data,val_data,meso_data,wt_list,turbines,rot_d,sim_name,WDbin,zLbin,highlight,ylim1,ylim2,figsize,wtref):
     n_wt = len(wt_list)
     
-    #compute distances
-    a = turbines.loc[turbines['VDC ID'] == wt_list[0],['X coordinate','Y coordinate']].values.flatten()
+    #compute distances to first turbine
+    a = turbines.loc[turbines['VDC ID'] == wt_list[0],['X coordinate','Y coordinate']].values.flatten()            
     dists = []
     coords = np.zeros((n_wt,2))
     for wt in range(n_wt):
         b = turbines.loc[turbines['VDC ID'] == wt_list[wt],['X coordinate','Y coordinate']].values.flatten()
         dists.append(((a[0]-b[0])**2+(a[1]-b[1])**2)**0.5 / rot_d)
         coords[wt,:]=b
-        
-    ref_data = ref_data.reindex(wt_list)
-#    ref_data_std = ref_data_std.reindex(wt_list) 
- 
-    f1, ax = plt.subplots(1,2,figsize = (14,5))
+         
+    f1, ax = plt.subplots(1,2,figsize = figsize)
     # plot layout highlighting the transect
     iwt = [x in wt_list for x in turbines['VDC ID']]
     ax[0].scatter(turbines['X coordinate'],turbines['Y coordinate'],c='silver', s=6)
@@ -82,46 +79,59 @@ def plot_transect(data,ref_data,meso_data,wt_list,turbines,rot_d,sim_name,WDbin,
     ax[0].get_xaxis().set_ticks([])
     ax[0].get_yaxis().set_ticks([])
        
-    #plot profiles of net power and gross (mesoscale) power ratio 
+    if wtref == 'ref':
+        Pval0 = val_data.mean()
+    else:
+        Pval0 = val_data.loc[wtref]
+    val_data = val_data.reindex(wt_list)
+#    val_data_std = val_data_std.reindex(wt_list) 
+
+    #plot profiles of net power and gross (mesoscale) power ratio            
     for index, row in data.iterrows():
         rownumber = np.where(data.index==index)[0][0]
-        ratio = row.reindex(wt_list)
-        if index in highlight:
-            ax[1].plot(dists,ratio/ratio[0], linewidth = 2, label = sim_name[rownumber])
-        elif index == 'ensemble':
-            ax[1].plot(dists,ratio/ratio[0], linewidth = 2, color = 'r', label = sim_name[rownumber])
+        Ptransect = row.reindex(wt_list)
+        if wtref == 'ref':
+            P0 = data.loc[index].mean() # Use mean of all turbines to normalize power ratio P/Pref
         else:
-            ax[1].plot(dists,ratio/ratio[0], color = 'silver', label = sim_name[rownumber])    
-    ax[1].plot(dists,ref_data/ref_data[0], marker='s', markerfacecolor='grey', 
-               markeredgecolor= 'k', color = 'k', linestyle='--', label = 'Ref')
+            P0 = data.loc[index][wtref] # Use wtref position to normalize power ratio P/Pwtref
+        if index in highlight:
+            ax[1].plot(wt_list,Ptransect/P0, linewidth = 2, label = sim_name[rownumber])
+        elif index == 'ensemble':
+            ax[1].plot(wt_list,Ptransect/P0, linewidth = 2, color = 'k', linestyle='-.', label = sim_name[rownumber])
+            if np.sum(data.loc['ensemble']-val_data)!=0.0:
+                ax[1].plot(wt_list,val_data/Pval0, marker='s', markerfacecolor='grey',
+                           markeredgecolor= 'k', color = 'k', linestyle='--', label = 'Observations')
+        else:
+            ax[1].plot(wt_list,Ptransect/P0, color = 'silver', label = sim_name[rownumber])    
+            
     ax[1].legend(bbox_to_anchor=(1.15, 1))
-    ax[1].set_ylim(ylim)    
-    if typeplot == 'eta':
-        ax[1].set_ylabel('Array Efficiency Ratio: $\eta/\eta_{0} = [P/P_0]_{micro}*[P(S_0)/P(S)]_{meso}$')
-    elif typeplot == 'P':
-        ax[1].set_ylabel('Net Power Ratio: $P/P_0$')  
+    ax[1].set_ylim(ylim1)
+    if wtref == 'ref':
+        ax[1].set_ylabel('Net Power Ratio: $P/P_{ref}$')  
     else:
-        ax[1].set_ylabel('Y')  
-    ax[1].set_xlabel('Distance from first turbine (D)')
+        ax[1].set_ylabel(f'Net Power Ratio: $P/P_{wtref}$')  
+    #ax[1].set_xlabel('Distance from first turbine (D)')
     ax[1].set_title('Transect '+wt_list[0]+'-'+wt_list[-1]+' ('+WDbin+', '+zLbin+')')
     ax[1].grid(True)
-    for wt in range(n_wt):
-        ax[1].text(dists[wt],0.5,wt_list[wt],rotation=90.,color='k')
-
+#    for wt in range(n_wt):
+#        ax[1].text(dists[wt],0.5,wt_list[wt],rotation=90.,color='k')
+    
     meso_P_ratio = meso_data.reindex(wt_list)
-    meso_P_ratio = meso_P_ratio/meso_P_ratio[0]
+    if wtref == 'ref':
+        meso_P0 = meso_data.mean()
+    else:
+        meso_P0 = meso_data.loc[wtref]
+    meso_P_ratio = meso_P_ratio/meso_P0
     bx = ax[1].twinx()
-    bx.plot(dists,meso_P_ratio,'--b')
-    bx.set_ylabel('Mesoscale Gross Power Ratio: $P(S)/P(S_0)$', color='b')
+    bx.plot(wt_list,meso_P_ratio,'--b')
+    if wtref == 'ref':
+        bx.set_ylabel('Mesoscale Gross Power Ratio: $P(S)/P(S_{ref})$', color='b')
+    else:
+        bx.set_ylabel(f'Mesoscale Gross Power Ratio: $P(S)/P(S_{wtref})$', color='b')   
 
+    bx.set_ylim(ylim2)
     ax[1].yaxis.set_major_locator(mtick.LinearLocator(9))
     bx.yaxis.set_major_locator(mtick.LinearLocator(9))
-
-#    plt.errorbar(x, y, e, linestyle='None', marker='^')
-#    x = dists
-#    y = ref_data/ref_data[0]
-#    e = ((1/ref_data[0]**2) * ref_data_std**2 + (ref_data**2/ref_data[0]**4) * ref_data_std[0]**2)**0.5 # asuuming independence     between ref_data and ref_data[0]
-#    ax[1].errorbar(x,y,e, marker='^', linestyle='None')
 
     plt.tight_layout()
     plt.show()

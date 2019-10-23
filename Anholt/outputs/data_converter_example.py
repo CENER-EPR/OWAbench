@@ -10,8 +10,8 @@ import datetime
 
 
 # file paths
-input_filepath = 'anh00b.csv'
-output_filepath = 'anh00b.csv'
+input_filepath = 'dud00a.csv'
+output_filepath = 'dud00a.csv'
 
 
 # read raw data
