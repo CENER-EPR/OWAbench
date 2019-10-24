@@ -99,8 +99,8 @@ def plot_transect(data,val_data,meso_data,wt_list,turbines,rot_d,sim_name,WDbin,
         elif index == 'ensemble':
             ax[1].plot(wt_list,Ptransect/P0, linewidth = 2, color = 'k', linestyle='-.', label = sim_name[rownumber])
             if np.sum(data.loc['ensemble']-val_data)!=0.0:
-                ax[1].plot(wt_list,val_data/Pval0, marker='s', markerfacecolor='grey',
-                           markeredgecolor= 'k', color = 'k', linestyle='--', label = 'Observations')
+                ax[1].plot(wt_list,val_data/Pval0, marker='s', markerfacecolor='cyan', linewidth = 3,
+                           markeredgecolor= 'k', color = 'cyan', linestyle='--', label = 'Observations')
         else:
             ax[1].plot(wt_list,Ptransect/P0, color = 'silver', label = sim_name[rownumber])    
             
