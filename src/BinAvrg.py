@@ -54,6 +54,7 @@ def centroid(arr):
 
 def plot_transect(data,val_data,meso_data,wt_list,turbines,rot_d,sim_name,WDbin,zLbin,highlight,ylim1,ylim2,figsize,wtref):
     n_wt = len(wt_list)
+    n_sim = data.shape[0]
     
     #compute distances to first turbine
     a = turbines.loc[turbines['VDC ID'] == wt_list[0],['X coordinate','Y coordinate']].values.flatten()            
@@ -80,31 +81,26 @@ def plot_transect(data,val_data,meso_data,wt_list,turbines,rot_d,sim_name,WDbin,
     ax[0].get_yaxis().set_ticks([])
        
     if wtref == 'ref':
-        Pval0 = val_data.mean()
+        data[wt_list].div(data.mean(axis = 1), axis=0).T.plot(ax = ax[1], color = 'lightgrey')
+        data[wt_list].div(data.mean(axis = 1), axis=0).T.plot(y = highlight, ax = ax[1], label = sim_name)
+        data[wt_list].div(data.mean(axis = 1), axis=0).T.plot(y = 'ensemble', ax = ax[1], linewidth = 3, 
+                                                              color = 'k',linestyle='-.', label = 'ensemble') 
+        if np.sum(data.loc['ensemble']-val_data)!=0.0:
+            val_data[wt_list].div(val_data.mean()).plot(marker='s', markerfacecolor='cyan', linewidth = 3, 
+                                                        markeredgecolor= 'k', markersize = 8, color = 'cyan', linestyle='--', 
+                                                        label = 'Observations') 
     else:
-        Pval0 = val_data.loc[wtref]
-    val_data = val_data.reindex(wt_list)
-#    val_data_std = val_data_std.reindex(wt_list) 
-
-    #plot profiles of net power and gross (mesoscale) power ratio            
-    for index, row in data.iterrows():
-        rownumber = np.where(data.index==index)[0][0]
-        Ptransect = row.reindex(wt_list)
-        if wtref == 'ref':
-            P0 = data.loc[index].mean() # Use mean of all turbines to normalize power ratio P/Pref
-        else:
-            P0 = data.loc[index][wtref] # Use wtref position to normalize power ratio P/Pwtref
-        if index in highlight:
-            ax[1].plot(wt_list,Ptransect/P0, linewidth = 2, label = sim_name[rownumber])
-        elif index == 'ensemble':
-            ax[1].plot(wt_list,Ptransect/P0, linewidth = 2, color = 'k', linestyle='-.', label = sim_name[rownumber])
-            if np.sum(data.loc['ensemble']-val_data)!=0.0:
-                ax[1].plot(wt_list,val_data/Pval0, marker='s', markerfacecolor='cyan', linewidth = 3,
-                           markeredgecolor= 'k', color = 'cyan', linestyle='--', label = 'Observations')
-        else:
-            ax[1].plot(wt_list,Ptransect/P0, color = 'silver', label = sim_name[rownumber])    
-            
-    ax[1].legend(bbox_to_anchor=(1.15, 1))
+        data[wt_list].div(data[wtref], axis=0).T.plot(ax = ax[1], color = 'lightgrey')        
+        data[wt_list].div(data[wtref], axis=0).T.plot(y = highlight, ax = ax[1], label = sim_name)
+        data[wt_list].div(data[wtref], axis=0).T.plot(y = 'ensemble', ax = ax[1], linewidth = 3, 
+                                                      color = 'k', linestyle='-.', label = 'ensemble')
+        if np.sum(data.loc['ensemble']-val_data)!=0.0:
+            val_data[wt_list].div(val_data[wt_ref]).plot(marker='s', markerfacecolor='cyan', linewidth = 3,
+                       markeredgecolor= 'k',  markersize = 8, color = 'cyan', linestyle='--', label = 'Observations',
+                       yerr = val_data[wt_list].div(val_data[wt_ref]))
+    
+    current_handles, current_labels = plt.gca().get_legend_handles_labels() 
+    ax[1].legend(current_handles[n_sim:], current_labels[n_sim:],bbox_to_anchor=(1.6, 1)) # avoid lightgrey sims in the legend
     ax[1].set_ylim(ylim1)
     if wtref == 'ref':
         ax[1].set_ylabel('Net Power Ratio: $P/P_{ref}$')  
