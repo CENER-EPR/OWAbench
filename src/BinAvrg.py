@@ -265,19 +265,29 @@ class BinAvrg:
         #create output arrays
         (n_wd_bins, n_stab_bins) = ts_bin_map.shape
         (_ , n_wt) = ts.shape
-        
-        mean = self.array_init(('wt', 'wd','zL'))
-        
-        std = xr.DataArray(np.empty((n_wt,n_wd_bins, n_stab_bins)), 
+              
+        if len(ts.squeeze().shape) == 2: # wt
+            mean = self.array_init(('wt', 'wd','zL'))
+            std = xr.DataArray(np.empty((n_wt,n_wd_bins, n_stab_bins)), 
                             coords={'wt':self.wt_label, 'wd': self.wd_bins_label, 'zL':self.zL_bins_label}, 
                             dims=('wt', 'wd','zL'))
-        
-        # compute std and mean
-        for i_wd in range(n_wd_bins):
-            for i_stab in range(n_stab_bins):
-                ts_bin = ts.reindex(ts_bin_map[i_wd,i_stab])
-                mean[:,i_wd,i_stab] = ts_bin.mean()
-                std[:,i_wd,i_stab] =  ts_bin.std()
+            # compute std and mean
+            for i_wd in range(n_wd_bins):
+                for i_stab in range(n_stab_bins):
+                    ts_bin = ts.reindex(ts_bin_map[i_wd,i_stab])
+                    mean[:,i_wd,i_stab] = ts_bin.mean()
+                    std[:,i_wd,i_stab] =  ts_bin.std()
+        else:
+            mean = self.array_init(('wd','zL'))
+            std = xr.DataArray(np.empty((n_wd_bins, n_stab_bins)), 
+                            coords={'wd': self.wd_bins_label, 'zL':self.zL_bins_label}, 
+                            dims=('wd','zL'))
+            # compute std and mean
+            for i_wd in range(n_wd_bins):
+                for i_stab in range(n_stab_bins):
+                    ts_bin = ts.reindex(ts_bin_map[i_wd,i_stab])
+                    mean[i_wd,i_stab] = ts_bin.mean()[0]
+                    std[i_wd,i_stab] =  ts_bin.std()[0]
         
         return mean, std
     def plot_heatmaps(self,data,sub_plt_size = (1.7,4),n_plot_cols = 4, figcaption = '', title=''):
