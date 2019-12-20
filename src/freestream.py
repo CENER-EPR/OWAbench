@@ -1,10 +1,9 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 """
-Derive the freestream wind speed based on scada measurements of Power 
+Derive the freestream wind speed or power based on scada measurements of Power 
 The reference wind direction is based on a mesoscale virtual time series at the
 wind farm centroid
-
 @author: Javier Sanz Rodrigo
 """
 import numpy as np
@@ -14,6 +13,7 @@ import netCDF4
 import matplotlib.pyplot as plt
 from time import sleep
 from tqdm import tqdm
+from scipy import interpolate
 
 import alphashape
 from descartes import PolygonPatch
@@ -32,7 +32,7 @@ def define_freestream(points,WD):
     raylength = 20000. # distance [m] upstream from the centroid to do ray-casting along a line that passes through each turbine in the boundary of the alphashape 
              # make sure the ray is always out of the wind farm
     sectorwidth = 45. # wind direction sector [deg] free of upstream turbines around the input wind direction 
-    alpha = 0.0004    # controls the tightness of the bounding shape to the layour (alpha = 0 returns the convex hull)
+    alpha = 0.0004    # controls the tightness of the bounding shape to the layout (alpha = 0 returns the convex hull)
     Nwt = points.shape[0] # number of turbines
     
     alpha_shape = alphashape.alphashape(points, alpha) # polygon of the wind farm to define turbines in freestream conditions (= turbines in the boundary)
@@ -52,10 +52,11 @@ def define_freestream(points,WD):
     return freestream
 
 
-siteID = 'Ormonde'
+siteID = 'Anholt'
 
 # Load wind farm layout data
 turbines = pd.read_csv('../' + siteID + '/inputs/' + siteID + '_layout.csv')
+Nwt = turbines.shape[0]
 pwr_curve_file = pd.read_csv('../' + siteID + '/inputs/' + siteID + '_pwc.csv')
 pwr_curve_file['Power'] = pwr_curve_file['Power']/1000 # scale to MW
 pwr_curve_inv = interpolate.interp1d(pwr_curve_file['Power'].values.flatten(),pwr_curve_file['U'].values.flatten(), 
@@ -81,38 +82,57 @@ WDref = pd.Series(
 Sref = Sref.reindex(obs_ts.index)
 WDref = WDref.reindex(obs_ts.index)
 
-obs_S_ts = pd.Series(index = obs_ts.index)
-obs_P_ts = pd.Series(index = obs_ts.index)
 
 Nobs = obs_ts.shape[0]
 points = turbines[['X coordinate','Y coordinate']].values
+#
+## One freestream for all turbines (homogeneous inflow)
+#obs_S_ts = pd.Series(index = obs_ts.index)
+#obs_P_ts = pd.Series(index = obs_ts.index)
+#pbar = tqdm(total = Nobs, leave = False, position = 0, desc="Progress")
+#for t in range(Nobs):
+#    WD = WDref.iloc[t]
+#    if not np.isnan(WD):
+#        freestream = define_freestream(points,WD)
+#        Pfree = np.mean(obs_ts.iloc[t,freestream])
+#        if Pfree < pwr_curve_file['Power'].max():
+#            obs_S_ts.iloc[t] = pwr_curve_inv(Pfree)
+#            obs_P_ts.iloc[t] = Pfree
+#    pbar.update(1)
+#pbar.close()
 
+# Individualized freestream based on front row of turbines (heterogeneous inflow) 
+obs_S_ts = pd.DataFrame(np.zeros((Nobs,Nwt)), index = obs_ts.index, columns = turbines['VDC ID'].values)
+obs_P_ts = pd.DataFrame(np.zeros((Nobs,Nwt)), index = obs_ts.index, columns = turbines['VDC ID'].values)
 pbar = tqdm(total = Nobs, leave = False, position = 0, desc="Progress")
 for t in range(Nobs):
     WD = WDref.iloc[t]
     if not np.isnan(WD):
         freestream = define_freestream(points,WD)
-        Pfree = np.mean(obs_ts.iloc[t,freestream])
-        if Pfree < pwr_curve_file['Power'].max():
-            obs_S_ts.iloc[t] = pwr_curve_inv(Pfree)
-            obs_P_ts.iloc[t] = Pfree
+        f = interpolate.NearestNDInterpolator(points[freestream], obs_ts.iloc[t,freestream])
+        Pfree = f(points)
+        obs_S_ts.iloc[t] = pwr_curve_inv(Pfree)
+        obs_P_ts.iloc[t] = Pfree.values
     pbar.update(1)
 pbar.close()
-    
-ax = obs_S_ts.iloc[200:500].plot(color = 'b', label = 'obs')    
-Sref.iloc[200:500].plot(ax = ax, color = 'r', label = 'meso')    
-ax.legend();    
 
-#fileout = '../' + siteID + '/observations/' + siteID + '_Sobs_mean.csv' 
+#fileout = '../' + siteID + '/observations/' + siteID + '_Sobs.csv' 
 #obs_S_ts.to_frame().to_csv(fileout)
 
-fileout = '../' + siteID + '/observations/' + siteID + '_Pfree_mean.csv' 
-obs_P_ts.to_frame().to_csv(fileout)
+fileout = '../' + siteID + '/observations/' + siteID + '_Pfree.csv' 
+obs_P_ts.to_csv(fileout)
 
-## Test freestream function
+### Test freestream function
 #WD = 325.
 #freestream = define_freestream(points,WD)
 #wt = 9 # execute for loop for this t
+#wd = np.array([WD - sectorwidth/2, WD + sectorwidth/2])
+#polarangle = (-wd + 90.)*np.pi/180. # from wind direction to polar angle
+#point_turbine = Point(points[wt,:])
+#point_upstream1 = Point(point_turbine.x + raylength*np.cos(polarangle[0]), point_turbine.y + raylength*np.sin(polarangle[0]))
+#point_upstream2 = Point(point_turbine.x + raylength*np.cos(polarangle[1]), point_turbine.y + raylength*np.sin(polarangle[1]))
+#line1 = LineString([point_upstream1, point_turbine])
+#line2 = LineString([point_upstream2, point_turbine])
 #                
 #fig, ax = plt.subplots(figsize = (8,8))
 #polarangle = (-WD + 90.)*np.pi/180
@@ -130,8 +150,8 @@ obs_P_ts.to_frame().to_csv(fileout)
 #ax.plot(x3,y3,'-.c')
 #x0,y0 = line0.xy
 #ax.plot(x0,y0,'--',color='grey')
-#ax.plot(points[t,0],points[t,1],'oc', markersize = 9)
-#ax.text(points[t,0]+200,points[t,1]+200,turbines['VDC ID'][t], weight='bold')
+#ax.plot(points[wt,0],points[wt,1],'oc', markersize = 9)
+#ax.text(points[wt,0]+200,points[wt,1]+200,turbines['VDC ID'][wt], weight='bold')
 #ax.text(point_ref.x+200,point_ref.y+200,'ref')
 #ax.plot(points[freestream,0],points[freestream,1],'or', markersize = 6)
 #ax.set_aspect(1)
@@ -139,6 +159,5 @@ obs_P_ts.to_frame().to_csv(fileout)
 #ax.set_xlabel('X [m]')
 #ax.set_ylabel('X [m]')
 #ax.grid()
-
-#plt.savefig('freestream.png', dpi=300, bbox_inches='tight')
-
+#
+##plt.savefig('freestream.png', dpi=300, bbox_inches='tight')
