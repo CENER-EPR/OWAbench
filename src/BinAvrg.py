@@ -14,6 +14,7 @@ import seaborn as sns
 from IPython.display import Markdown
 import xarray as xr
 from matplotlib import ticker as mtick
+import matplotlib.gridspec as gridspec
     
 def plot_wf_layout(x,y,labels = [],figsize=(12,6), data = [],vmin = np.nan,vmax = np.nan):
     if len(data)==0:
@@ -65,53 +66,58 @@ def plot_transect(data,val_data,meso_data,obs_Pfree_data,wt_list,turbines,rot_d,
         dists.append(((a[0]-b[0])**2+(a[1]-b[1])**2)**0.5 / rot_d)
         coords[wt,:]=b
          
-    f1, ax = plt.subplots(1,2,figsize = figsize)    
+    f1 = plt.figure(figsize = figsize)   # constrained_layout=True
+    spec = gridspec.GridSpec(ncols=2, nrows=2, figure=f1, width_ratios=[1, 1.5], height_ratios=[2, 1])
     # plot layout highlighting the transect
+    
     iwt = [x in wt_list for x in turbines['VDC ID']]
-    ax[0].scatter(turbines['X coordinate'],turbines['Y coordinate'],c='silver', s=10)
-    ax[0].scatter(turbines['X coordinate'][iwt],turbines['Y coordinate'][iwt],c='black',s=10)
-    ax[0].text(coords[0][0],coords[0][1],wt_list[0],{'ha': 'right'})
-    ax[0].text(coords[-1][0],coords[-1][1],wt_list[-1],{'ha': 'right'})
-    ax[0].axis('scaled')
-    ax[0].spines['top'].set_visible(False)
-    ax[0].spines['bottom'].set_visible(False)
-    ax[0].spines['left'].set_visible(False)
-    ax[0].spines['right'].set_visible(False)
-    ax[0].get_xaxis().set_ticks([])
-    ax[0].get_yaxis().set_ticks([])
+    f1_ax1 = f1.add_subplot(spec[:, 0])
+    f1_ax1.scatter(turbines['X coordinate'],turbines['Y coordinate'],c='silver', marker = 'o', s=20)
+    f1_ax1.scatter(turbines['X coordinate'][iwt],turbines['Y coordinate'][iwt],c='black', marker = 'o',s=20)
+    f1_ax1.text(coords[0][0],coords[0][1],wt_list[0],{'ha': 'right'}, fontsize=14)
+    f1_ax1.text(coords[-1][0],coords[-1][1],wt_list[-1],{'ha': 'right'}, fontsize=14)
+    f1_ax1.axis('scaled')
+    f1_ax1.spines['top'].set_visible(False)
+    f1_ax1.spines['bottom'].set_visible(False)
+    f1_ax1.spines['left'].set_visible(False)
+    f1_ax1.spines['right'].set_visible(False)
+    f1_ax1.get_xaxis().set_ticks([])
+    f1_ax1.get_yaxis().set_ticks([])
        
+    f1_ax2 = f1.add_subplot(spec[0, 1])
     if wtref == 'ref':
-        data[wt_list].div(data.mean(axis = 1), axis=0).T.plot(ax = ax[1], color = 'lightgrey')
-        data[wt_list].div(data.mean(axis = 1), axis=0).T.plot(y = highlight, ax = ax[1], label = sim_name)
-        data[wt_list].div(data.mean(axis = 1), axis=0).T.plot(y = 'ensemble', ax = ax[1], linewidth = 3, 
+        data[wt_list].div(data.mean(axis = 1), axis=0).T.plot(ax = f1_ax2, color = 'lightgrey')
+        data[wt_list].div(data.mean(axis = 1), axis=0).T.plot(y = highlight, ax = f1_ax2, label = sim_name)
+        data[wt_list].div(data.mean(axis = 1), axis=0).T.plot(y = 'ensemble', ax = f1_ax2, linewidth = 3, 
                                                               color = 'k',linestyle='-.', label = 'ensemble') 
         if np.sum(data.loc['ensemble']-val_data)!=0.0:
             val_data[wt_list].div(val_data.mean()).plot(marker='s', markerfacecolor='cyan', linewidth = 3, 
                                                         markeredgecolor= 'k', markersize = 8, color = 'cyan', linestyle='--', 
-                                                        label = 'Observations') 
+                                                        ax = f1_ax2, label = 'Observations') 
     else:
-        data[wt_list].div(data[wtref], axis=0).T.plot(ax = ax[1], color = 'lightgrey')        
-        data[wt_list].div(data[wtref], axis=0).T.plot(y = highlight, ax = ax[1], label = sim_name)
-        data[wt_list].div(data[wtref], axis=0).T.plot(y = 'ensemble', ax = ax[1], linewidth = 3, 
+        data[wt_list].div(data[wtref], axis=0).T.plot(ax = f1_ax2, color = 'lightgrey')        
+        data[wt_list].div(data[wtref], axis=0).T.plot(y = highlight, ax = f1_ax2, label = sim_name)
+        data[wt_list].div(data[wtref], axis=0).T.plot(y = 'ensemble', ax = f1_ax2, linewidth = 3, 
                                                       color = 'k', linestyle='-.', label = 'ensemble')
         if np.sum(data.loc['ensemble']-val_data)!=0.0:
             val_data[wt_list].div(val_data[wt_ref]).plot(marker='s', markerfacecolor='cyan', linewidth = 3,
-                       markeredgecolor= 'k',  markersize = 8, color = 'cyan', linestyle='--', label = 'Observations',
-                       yerr = val_data[wt_list].div(val_data[wt_ref]))
+                       markeredgecolor= 'k',  markersize = 8, color = 'cyan', linestyle='--', ax = f1_ax2, 
+                       label = 'Observations', yerr = val_data[wt_list].div(val_data[wt_ref]))
     
     current_handles, current_labels = plt.gca().get_legend_handles_labels() 
-    ax[1].legend(current_handles[n_sim:], current_labels[n_sim:],
-                 loc = 'upper left', bbox_to_anchor=(1.15, 1)) # avoid lightgrey sims in the legend
-    ax[1].set_ylim(ylim1)
+    f1_ax2.legend(current_handles[n_sim:], current_labels[n_sim:],
+                 loc = 'upper left', bbox_to_anchor=(1, 1)) # avoid lightgrey sims in the legend
+    f1_ax2.set_ylim(ylim1)
+    f1_ax2.set_xlabel(None)
     if wtref == 'ref':
-        ax[1].set_ylabel('Net Power Ratio: $P/P_{ref}$')  
+        f1_ax2.set_ylabel('Net Power Ratio: $P/P_{ref}$')  
     else:
-        ax[1].set_ylabel(f'Net Power Ratio: $P/P_{wtref}$')  
-    #ax[1].set_xlabel('Distance from first turbine (D)')
-    ax[1].set_title('Transect '+wt_list[0]+'-'+wt_list[-1]+' ('+WDbin+', '+zLbin+')')
-    ax[1].grid(True)
+        f1_ax2.set_ylabel(f'Net Power Ratio: $P/P_{wtref}$')  
+    #f1_ax2.set_xlabel('Distance from first turbine (D)')
+    f1_ax2.set_title('Transect '+wt_list[0]+'-'+wt_list[-1]+' ('+WDbin+', '+zLbin+')')
+    f1_ax2.grid(True)
 #    for wt in range(n_wt):
-#        ax[1].text(dists[wt],0.5,wt_list[wt],rotation=90.,color='k')
+#        f1_ax2.text(dists[wt],0.5,wt_list[wt],rotation=90.,color='k')
     
     meso_P_ratio = meso_data.reindex(wt_list)
     obs_Pfree_ratio = obs_Pfree_data.reindex(wt_list)
@@ -123,23 +129,23 @@ def plot_transect(data,val_data,meso_data,obs_Pfree_data,wt_list,turbines,rot_d,
         obs_Pfree_P0 = obs_Pfree_data.loc[wtref]
     meso_P_ratio = meso_P_ratio/meso_P0
     obs_Pfree_ratio = obs_Pfree_ratio/obs_Pfree_P0
-    bx = ax[1].twinx()
-    bx.plot(wt_list,meso_P_ratio,'--b',label = 'Meso')
-    bx.plot(wt_list,obs_Pfree_ratio,'--k', label = 'Obs')
+    
+    f1_ax3 = f1.add_subplot(spec[1, 1])
+    f1_ax3.plot(wt_list,meso_P_ratio,'-.k',linewidth = 3,label = 'Meso')
+    f1_ax3.plot(wt_list,obs_Pfree_ratio,marker='s', markerfacecolor='cyan', linewidth = 3,
+                       markeredgecolor= 'k',  markersize = 8, color = 'cyan', linestyle='--', label = 'Obs')
     if wtref == 'ref':
-        bx.set_ylabel('Gross Power Ratio: $P(S)/P(S_{ref})$', color='b') 
+        f1_ax3.set_ylabel('Gross Power Ratio: $P(S)/P(S_{ref})$', color='b') 
     else:
-        bx.set_ylabel(f'Gross Power Ratio: $P(S)/P(S_{wtref})$', color='b')    
+        f1_ax3.set_ylabel(f'Gross Power Ratio: $P(S)/P(S_{wtref})$', color='b')    
 
-    bx.set_ylim(ylim2)
-    bx.legend(loc = 'upper right')
-    ax[1].yaxis.set_major_locator(mtick.LinearLocator(9))
-    bx.yaxis.set_major_locator(mtick.LinearLocator(9))
-
-    plt.tight_layout()
+    f1_ax3.legend(loc = 'upper left', bbox_to_anchor=(1, 1))
+    f1_ax3.grid(True)
+    f1_ax3.set_ylim(ylim2)
+    
     plt.show()
   
-    return ax,bx
+    return f1_ax1,f1_ax2,f1_ax3
 
 def restrict_to_ts(data, ts):
     return data[~data.index.duplicated()].reindex(ts).dropna()
