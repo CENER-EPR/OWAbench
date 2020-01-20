@@ -1,0 +1,171 @@
+{
+  "$id": "http://example.com/root.json",
+  "type": "array",
+  "title": "WIDACO Root Schema",
+  "items": {
+    "$id": "#/items",
+    "type": "object",
+    "title": "The Variable Schema",
+    "required": [
+      "name",
+      "description",
+      "units",
+      "netcdf"
+    ],
+    "properties": {
+      "name": {
+        "$id": "#/items/properties/name",
+        "type": "object",
+        "title": "Name",
+        "required": [
+          "default"
+        ],
+        "properties": {
+          "default": {
+            "$id": "#/items/properties/name/properties/default",
+            "type": "string",
+            "title": "Default variable name",
+            "description": "The unique and obligatory variable name. Based on CF convention if possible",
+            "default": "",
+            "examples": [
+              "wind_speed"
+            ]
+          },
+          "cf": {
+            "$id": "#/items/properties/name/properties/cf",
+            "type": "string",
+            "title": "CF conventions variable name",
+            "description": "Climate and forecast conventions variable name",
+            "default": "",
+            "examples": [
+              "wind_speed"
+            ]
+          },
+          "open_oa": {
+            "$id": "#/items/properties/name/properties/open_oa",
+            "type": "string",
+            "title": "OpenOA V1 variable name",
+            "description": "OpenOA V1 variable name. https://github.com/NREL/OpenOA ",
+            "default": "",
+            "examples": [
+              "windspeed_ms"
+            ]
+          },
+          "iec_61400-25": {
+            "$id": "#/items/properties/name/properties/iec_61400-25",
+            "type": "string",
+            "title": "IEC 61400-25 standard variable name",
+            "description": "Based on IEC 61400-25-2:2006 (EN 61400-25-2:2007, CEI 61400-25-2:2006).",
+            "default": "",
+            "examples": [
+              "MetAlt1HorWdSpd"
+            ]
+          },
+          "lidaco": {
+            "$id": "#/items/properties/name/properties/lidaco",
+            "type": "string",
+            "title": "LIDACO variable name",
+            "description": "Lidar Data Converter variable name. https://github.com/e-WindLidar/Lidaco",
+            "default": "",
+            "examples": [
+              "vertical_wind_speed"
+            ]
+          },
+          "grib": {
+            "$id": "#/items/properties/name/properties/grib",
+            "type": "string",
+            "title": "GRIB file variable name",
+            "description": "GRIB variable code based on http://cfconventions.org/Data/cf-standard-names/current/build/cf-standard-name-table.html ",
+            "default": "",
+            "examples": [
+              "31"
+            ]
+          },
+          "other": {
+            "$id": "#/items/properties/name/properties/other",
+            "type": "array",
+            "title": "Other variable names",
+            "description": "List of other names used for the variable. Accepts reg exp. Can be ambiguous. Used for for searching, automatic translation of often variable names, and for deprecated standards.",
+            "items": {
+              "$id": "#/items/properties/name/properties/other/items",
+              "type": "string",
+              "title": "The Items Schema",
+              "default": "",
+              "examples": [
+                "ws",
+                "wind speed"
+              ]
+            }
+          }
+        }
+      },
+      "description": {
+        "$id": "#/items/properties/description",
+        "type": "string",
+        "title": "Description",
+        "description": "Description of the variable. Usually a copy of the CF convention description.",
+        "default": "",
+        "examples": [
+          "Speed is the magnitude of velocity. Wind is defined as a two-dimensional (horizontal) air velocity vector, with no vertical component. (Vertical motion in the atmosphere has the standard name upward_air_velocity.) The wind speed is the magnitude of the wind velocity."
+        ]
+      },
+      "units": {
+        "$id": "#/items/properties/units",
+        "type": "string",
+        "title": "Units",
+        "description": "Based on CF conventions.",
+        "default": "",
+        "examples": [
+          "m s-1"
+        ]
+      },
+      "ref": {
+        "$id": "#/items/properties/ref",
+        "type": "object",
+        "title": "Reference",
+        "properties": {
+          "nvs": {
+            "$id": "#/items/properties/ref/properties/nvs",
+            "type": "string",
+            "title": "Reference in NVS database",
+            "description": "A link to the variable's record in the NERC Vocabulary Server https://www.bodc.ac.uk/resources/products/web_services/vocab/",
+            "default": "",
+            "examples": [
+              "http://vocab.nerc.ac.uk/collection/P07/current/CFSN0038/"
+            ]
+          }
+        }
+      },
+      "netcdf": {
+        "$id": "#/items/properties/netcdf",
+        "type": "object",
+        "title": "netCDF metadata",
+        "required": [
+          "var_type"
+        ],
+        "properties": {
+          "var_type": {
+            "$id": "#/items/properties/netcdf/properties/var_type",
+            "type": "string",
+            "title": "Variable type",
+            "description": "Obligatory, numpy.dtype object name. Only simple types are supported (no ventors, arrays, etc.)",
+            "default": "",
+            "examples": [
+              "NC_FLOAT"
+            ]
+          },
+          "other": {
+            "$id": "#/items/properties/netcdf/properties/other",
+            "type": "string",
+            "title": "Other",
+            "description": "Additional, variable specific metadata",
+            "default": "",
+            "examples": [
+              "units=\"seconds since 1970-01-01 00:00:00.00 UTC\", calendar=\"gregorian\" "
+            ]
+          }
+        }
+      }
+    }
+  }
+}

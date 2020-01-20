@@ -52,7 +52,7 @@ def centroid(arr):
     sum_y = np.sum(arr[:, 1])
     return sum_x/length, sum_y/length
 
-def plot_transect(data,val_data,meso_data,wt_list,turbines,rot_d,sim_name,WDbin,zLbin,highlight,ylim1,ylim2,figsize,wtref):
+def plot_transect(data,val_data,meso_data,obs_Pfree_data,wt_list,turbines,rot_d,sim_name,WDbin,zLbin,highlight,ylim1,ylim2,figsize,wtref):
     n_wt = len(wt_list)
     n_sim = data.shape[0]
     
@@ -65,11 +65,11 @@ def plot_transect(data,val_data,meso_data,wt_list,turbines,rot_d,sim_name,WDbin,
         dists.append(((a[0]-b[0])**2+(a[1]-b[1])**2)**0.5 / rot_d)
         coords[wt,:]=b
          
-    f1, ax = plt.subplots(1,2,figsize = figsize)
+    f1, ax = plt.subplots(1,2,figsize = figsize)    
     # plot layout highlighting the transect
     iwt = [x in wt_list for x in turbines['VDC ID']]
-    ax[0].scatter(turbines['X coordinate'],turbines['Y coordinate'],c='silver', s=6)
-    ax[0].scatter(turbines['X coordinate'][iwt],turbines['Y coordinate'][iwt],c='black',s=6)
+    ax[0].scatter(turbines['X coordinate'],turbines['Y coordinate'],c='silver', s=10)
+    ax[0].scatter(turbines['X coordinate'][iwt],turbines['Y coordinate'][iwt],c='black',s=10)
     ax[0].text(coords[0][0],coords[0][1],wt_list[0],{'ha': 'right'})
     ax[0].text(coords[-1][0],coords[-1][1],wt_list[-1],{'ha': 'right'})
     ax[0].axis('scaled')
@@ -100,7 +100,8 @@ def plot_transect(data,val_data,meso_data,wt_list,turbines,rot_d,sim_name,WDbin,
                        yerr = val_data[wt_list].div(val_data[wt_ref]))
     
     current_handles, current_labels = plt.gca().get_legend_handles_labels() 
-    ax[1].legend(current_handles[n_sim:], current_labels[n_sim:],bbox_to_anchor=(1.6, 1)) # avoid lightgrey sims in the legend
+    ax[1].legend(current_handles[n_sim:], current_labels[n_sim:],
+                 loc = 'upper left', bbox_to_anchor=(1.15, 1)) # avoid lightgrey sims in the legend
     ax[1].set_ylim(ylim1)
     if wtref == 'ref':
         ax[1].set_ylabel('Net Power Ratio: $P/P_{ref}$')  
@@ -113,19 +114,25 @@ def plot_transect(data,val_data,meso_data,wt_list,turbines,rot_d,sim_name,WDbin,
 #        ax[1].text(dists[wt],0.5,wt_list[wt],rotation=90.,color='k')
     
     meso_P_ratio = meso_data.reindex(wt_list)
+    obs_Pfree_ratio = obs_Pfree_data.reindex(wt_list)
     if wtref == 'ref':
         meso_P0 = meso_data.mean()
+        obs_Pfree_P0 = obs_Pfree_data.mean()
     else:
         meso_P0 = meso_data.loc[wtref]
+        obs_Pfree_P0 = obs_Pfree_data.loc[wtref]
     meso_P_ratio = meso_P_ratio/meso_P0
+    obs_Pfree_ratio = obs_Pfree_ratio/obs_Pfree_P0
     bx = ax[1].twinx()
-    bx.plot(wt_list,meso_P_ratio,'--b')
+    bx.plot(wt_list,meso_P_ratio,'--b',label = 'Meso')
+    bx.plot(wt_list,obs_Pfree_ratio,'--k', label = 'Obs')
     if wtref == 'ref':
-        bx.set_ylabel('Mesoscale Gross Power Ratio: $P(S)/P(S_{ref})$', color='b')
+        bx.set_ylabel('Gross Power Ratio: $P(S)/P(S_{ref})$', color='b') 
     else:
-        bx.set_ylabel(f'Mesoscale Gross Power Ratio: $P(S)/P(S_{wtref})$', color='b')   
+        bx.set_ylabel(f'Gross Power Ratio: $P(S)/P(S_{wtref})$', color='b')    
 
     bx.set_ylim(ylim2)
+    bx.legend(loc = 'upper right')
     ax[1].yaxis.set_major_locator(mtick.LinearLocator(9))
     bx.yaxis.set_major_locator(mtick.LinearLocator(9))
 

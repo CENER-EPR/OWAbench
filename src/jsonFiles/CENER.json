@@ -1,0 +1,885 @@
+[
+  {
+    "name": {
+      "default": "Times",
+      "var_type": "double",
+      "cf": "Times",
+      "open_oa": "",
+      "lidaco": "",
+      "other": [
+        "t",
+        "timeStamp"
+      ]
+    },
+    "description": "iec_61400-25 defines time as a complex type consisting of two integers SecondSinceEpoch and FractionOfSecond with the \"1970\" reference. For netCDF a single DOUBLE value with undefined reference is used. We use a mix of the two by using a single DOUBLE value with 1970 reference. NetCDF has a build in support for the metadata on the used reference date and calendar",
+    "units": "seconds since 1970-01-01 00:00:00.00 UTC, calendar=gregorian",
+    "ref": {
+      "nvs": "http://vocab.nerc.ac.uk/collection/P07/current/CFSN0115/"
+    },
+    "netcdf": {
+      "var_type": "double",
+      "other": ""
+    }
+  },
+  {
+    "name": {
+      "default": "northward_wind",
+      "cf": "northward_wind",
+      "open_oa": "",
+      "iec_61400-25": "",
+      "lidaco": "",
+      "grib": "34 E132",
+      "other": ["ws_y", "ws_v", "wind speed", "y_wind", "geostrophic_northward_wind"]
+    },
+    "description": "Northward indicates a vector component which is positive when directed northward (negative southward). Wind is defined as a two-dimensional (horizontal) air velocity vector, with no vertical component. (Vertical motion in the atmosphere has the standard name upward_air_velocity.)",
+    "units": "m s-1",
+    "ref": {
+      "nvs": "http://vocab.nerc.ac.uk/collection/P07/current/CFSN0461/"
+    },
+    "netcdf": {
+      "var_type": "float",
+      "other": ""
+    }
+  },
+  {
+    "name": {
+      "default": "eastward_wind",
+      "cf": "eastward_wind",
+      "open_oa": "",
+      "iec_61400-25": "",
+      "lidaco": "",
+      "grib": "33 E131",
+      "other": ["ws_x", "ws_u", "wind speed", "x_wind", "geostrophic_eastward_wind"]
+    },
+    "description": "Eastward indicates a vector component which is positive when directed eastward (negative westward). Wind is defined as a two-dimensional (horizontal) air velocityvector, with no vertical component. (Vertical motion in the atmosphere has the standard name upward_air_velocity.)",
+    "units": "m s-1",
+    "ref": {
+      "nvs": "http://vocab.nerc.ac.uk/collection/P07/current/CFSN0653"
+    },
+    "netcdf": {
+      "var_type": "float",
+      "other": ""
+    }
+  },
+  {
+    "name": {
+      "default": "wind_from_direction",
+      "cf": "wind_from_direction",
+      "open_oa": "",
+      "iec_61400-25": "",
+      "lidaco": "",
+      "grib": "31",
+      "other": []
+    },
+    "description": "Wind is defined as a two-dimensional (horizontal) air velocity vector, with no vertical component. (Vertical motion in the atmosphere has the standard name upward_air_velocity.) In meteorological reports, the direction of the wind vector is usually (but not always) given as the direction from which it is blowing (wind_from_direction) (westerly, northerly, etc.). In other contexts, such as atmospheric modelling, it is often natural to give the direction in the usual manner of vectors as the heading or the direction to which it is blowing (wind_to_direction) (eastward, southward, etc.) from_direction is used in the construction X_from_direction and indicates the direction from which the velocity vector of X is coming.",
+    "units": "degree",
+    "ref": {
+      "nvs": "http://vocab.nerc.ac.uk/collection/P07/current/CFSN0036/"
+    },
+    "netcdf": {
+      "var_type": "float",
+      "other": ""
+    }
+  },
+  {
+    "name": {
+      "default": "longitude",
+      "cf": "longitude",
+      "open_oa": "",
+      "iec_61400-25": "",
+      "lidaco": "",
+      "grib": "",
+      "other": []
+    },
+    "description": "Longitude is positive eastward; its units of degree_east (or equivalent) indicate this explicitly. In a latitude-longitude system defined with respect to a rotated North Pole, the standard name of grid_longitude should be used instead of longitude. Grid longitude is positive in the grid-eastward direction, but its units should be plain degree.",
+    "units": "degrees_east",
+    "ref": {
+      "nvs": "http://vocab.nerc.ac.uk/collection/P07/current/CFSN0554/"
+    },
+    "netcdf": {
+      "var_type": "float",
+      "other": ""
+    }
+  },
+  {
+    "name": {
+      "default": "latitude",
+      "cf": "latitude",
+      "open_oa": "",
+      "iec_61400-25": "",
+      "lidaco": "",
+      "grib": "",
+      "other": []
+    },
+    "description": "Latitude is positive northward; its units of degree_north (or equivalent) indicate this explicitly. In a latitude-longitude system defined with respect to a rotated North Pole, the standard name of grid_latitude should be used instead of latitude. Grid latitude is positive in the grid-northward direction, but its units should be plain degree.",
+    "units": "degrees_north",
+    "ref": {
+      "nvs": "http://vocab.nerc.ac.uk/collection/P07/current/CFSN0600/"
+    },
+    "netcdf": {
+      "var_type": "float",
+      "other": ""
+    }
+  },
+  {
+    "name": {
+      "default": "XLAT",
+      "cf": "latitude",
+      "open_oa": "",
+      "iec_61400-25": "",
+      "lidaco": "",
+      "grib": "",
+      "other": []
+    },
+    "description": "Latitude is positive northward; its units of degree_north (or equivalent) indicate this explicitly. In a latitude-longitude system defined with respect to a rotated North Pole, the standard name of grid_latitude should be used instead of latitude. Grid latitude is positive in the grid-northward direction, but its units should be plain degree.",
+    "units": "degrees_north",
+    "ref": {
+      "nvs": "http://vocab.nerc.ac.uk/collection/P07/current/CFSN0600/"
+    },
+    "netcdf": {
+      "var_type": "float",
+      "other": ""
+    }
+  },
+  {
+    "name": {
+      "default": "XLONG",
+      "cf": "longitude",
+      "open_oa": "",
+      "iec_61400-25": "",
+      "lidaco": "",
+      "grib": "",
+      "other": []
+    },
+    "description": "Longitude is positive eastward; its units of degree_east (or equivalent) indicate this explicitly. In a latitude-longitude system defined with respect to a rotated North Pole, the standard name of grid_longitude should be used instead of longitude. Grid longitude is positive in the grid-eastward direction, but its units should be plain degree.",
+    "units": "degrees_east",
+    "ref": {
+      "nvs": "http://vocab.nerc.ac.uk/collection/P07/current/CFSN0554/"
+    },
+    "netcdf": {
+      "var_type": "float",
+      "other": ""
+    }
+  },
+  {
+    "name": {
+      "default": "U10",
+      "cf": "eastward_wind",
+      "open_oa": "",
+      "iec_61400-25": "",
+      "lidaco": "",
+      "grib": "33 E131",
+      "other": []
+    },
+    "description": "10m above ground eastward component of wind speed",
+    "units": "m s-1",
+    "positive" : "east",
+    "ref": {
+      "nvs": "http://vocab.nerc.ac.uk/collection/P07/current/CFSN0653"
+    },
+    "netcdf": {
+      "var_type": "float",
+      "other": ""
+    }
+  },
+  {
+    "name": {
+      "default": "V10",
+      "cf": "northward_wind",
+      "open_oa": "",
+      "iec_61400-25": "",
+      "lidaco": "",
+      "grib": "34 E132",
+      "other": []
+    },
+    "description": "10m above ground northward component of wind speed",
+    "units": "m s-1",
+    "positive" : "north",
+    "ref": {
+      "nvs": "http://vocab.nerc.ac.uk/collection/P07/current/CFSN0461/"
+    },
+    "netcdf": {
+      "var_type": "float",
+      "other": ""
+    }
+  },
+  {
+    "name": {
+      "default": "UST",
+      "cf": "friction_wind_speed",
+      "open_oa": "",
+      "iec_61400-25": "",
+      "lidaco": "",
+      "grib": "253",
+      "other": []
+    },
+    "description": "friction velocity",
+    "units": "m s-1",
+    "ref": {
+      "nvs": ""
+    },
+    "netcdf": {
+      "var_type": "float",
+      "other": ""
+    }
+  },
+  {
+    "name": {
+      "default": "L",
+      "cf": "Monin_Obukhov_length",
+      "open_oa": "",
+      "iec_61400-25": "",
+      "lidaco": "",
+      "grib": "",
+      "other": []
+    },
+    "description": "Monin Obukhov length at surface layer",
+    "units": "m",
+    "ref": {
+      "nvs": ""
+    },
+    "netcdf": {
+      "var_type": "float",
+      "other": ""
+    }
+  },
+  {
+    "name": {
+      "default": "HFX",
+      "cf": "upward_heat_flux_at_the_surface",
+      "open_oa": "",
+      "iec_61400-25": "",
+      "lidaco": "",
+      "grib": "155",
+      "other": []
+    },
+    "description": "UPWARD HEAT FLUX AT THE SURFACE",
+    "units": "W m-2",
+    "ref": {
+      "nvs": ""
+    },
+    "netcdf": {
+      "var_type": "float",
+      "other": ""
+    }
+  },
+  {
+    "name": {
+      "default": "TSK",
+      "cf": "surface_skin_temperature",
+      "open_oa": "",
+      "iec_61400-25": "",
+      "lidaco": "",
+      "grib": "148",
+      "other": []
+    },
+    "description": "Surface Skin Temperature",
+    "units": "K",
+    "ref": {
+      "nvs": ""
+    },
+    "netcdf": {
+      "var_type": "float",
+      "other": ""
+    }
+  },
+  {
+    "name": {
+      "default": "POT",
+      "cf": "air_potential_temperature",
+      "open_oa": "",
+      "iec_61400-25": "",
+      "lidaco": "",
+      "grib": "13",
+      "other": []
+    },
+    "description": "Potential temperature is the temperature a parcel of air or sea water would have if moved adiabatically to sea level pressure.",
+    "units": "K",
+    "ref": {
+      "nvs": ""
+    },
+    "netcdf": {
+      "var_type": "float",
+      "other": ""
+    }
+  },
+  {
+    "name": {
+      "default": "TKE",
+      "cf": "turbulent_kinetic_energy",
+      "open_oa": "",
+      "iec_61400-25": "",
+      "lidaco": "",
+      "grib": "158",
+      "other": []
+    },
+    "description": "Turbulent kinetic energy obtained from 0.5*QKE",
+    "units": "J/kg",
+    "ref": {
+      "nvs": ""
+    },
+    "netcdf": {
+      "var_type": "float",
+      "other": ""
+    }
+  },
+  {
+    "name": {
+      "default": "T2",
+      "cf": "temperature_2m",
+      "open_oa": "",
+      "iec_61400-25": "",
+      "lidaco": "",
+      "grib": "11",
+      "other": []
+    },
+    "description": "Air temperature at 2m a.g.l.",
+    "units": "K",
+    "ref": {
+      "nvs": ""
+    },
+    "netcdf": {
+      "var_type": "float",
+      "other": ""
+    }
+  },
+  {
+    "name": {
+      "default": "U",
+      "cf": "eastward_wind",
+      "open_oa": "",
+      "iec_61400-25": "",
+      "lidaco": "",
+      "grib": "33 E131",
+      "other": []
+    },
+    "description": "3D eastward component of wind speed",
+    "units": "m s-1",
+    "positive" : "east",
+    "ref": {
+      "nvs": "http://vocab.nerc.ac.uk/collection/P07/current/CFSN0653"
+    },
+    "netcdf": {
+      "var_type": "float",
+      "other": ""
+    }
+  },
+  {
+    "name": {
+      "default": "V",
+      "cf": "northward_wind",
+      "open_oa": "",
+      "iec_61400-25": "",
+      "lidaco": "",
+      "grib": "34 E132",
+      "other": []
+    },
+    "description": "3D northward component of wind speed",
+    "units": "m s-1",
+    "positive" : "north",
+    "ref": {
+      "nvs": "http://vocab.nerc.ac.uk/collection/P07/current/CFSN0461/"
+    },
+    "netcdf": {
+      "var_type": "float",
+      "other": ""
+    }
+  },
+  {
+    "name": {
+      "default": "U_corr",
+      "cf": "eastward_wind",
+      "open_oa": "",
+      "iec_61400-25": "",
+      "lidaco": "",
+      "grib": "33 E131",
+      "other": []
+    },
+    "description": "3D eastward component of wind speed, corrected by the directional mesoscale factor",
+    "units": "m s-1",
+    "positive" : "east",
+    "ref": {
+      "nvs": "http://vocab.nerc.ac.uk/collection/P07/current/CFSN0653"
+    },
+    "netcdf": {
+      "var_type": "float",
+      "other": ""
+    }
+  },
+  {
+    "name": {
+      "default": "V_corr",
+      "cf": "northward_wind",
+      "open_oa": "",
+      "iec_61400-25": "",
+      "lidaco": "",
+      "grib": "34 E132",
+      "other": []
+    },
+    "description": "3D northward component of wind speed, corrected by the directional mesoscale factor",
+    "units": "m s-1",
+    "positive" : "north",
+    "ref": {
+      "nvs": "http://vocab.nerc.ac.uk/collection/P07/current/CFSN0461/"
+    },
+    "netcdf": {
+      "var_type": "float",
+      "other": ""
+    }
+  },
+    {
+    "name": {
+      "default": "U_scada",
+      "cf": "eastward_wind",
+      "open_oa": "",
+      "iec_61400-25": "",
+      "lidaco": "",
+      "grib": "33 E131",
+      "other": []
+    },
+    "description": "3D eastward component of wind speed from the scada data",
+    "units": "m s-1",
+    "positive" : "east",
+    "ref": {
+      "nvs": "http://vocab.nerc.ac.uk/collection/P07/current/CFSN0653"
+    },
+    "netcdf": {
+      "var_type": "float",
+      "other": ""
+    }
+  },
+  {
+    "name": {
+      "default": "V_scada",
+      "cf": "northward_wind",
+      "open_oa": "",
+      "iec_61400-25": "",
+      "lidaco": "",
+      "grib": "34 E132",
+      "other": []
+    },
+    "description": "3D northward component of wind speed from the scada data",
+    "units": "m s-1",
+    "positive" : "north",
+    "ref": {
+      "nvs": "http://vocab.nerc.ac.uk/collection/P07/current/CFSN0461/"
+    },
+    "netcdf": {
+      "var_type": "float",
+      "other": ""
+    }
+  },
+  {
+    "name": {
+      "default": "W",
+      "cf": "z-wind component",
+      "open_oa": "",
+      "iec_61400-25": "",
+      "lidaco": "",
+      "grib": "",
+      "other": []
+    },
+    "description": "vertical component of wind speed",
+    "units": "m s-1",
+    "positive" : "up",
+    "ref": {
+      "nvs": "http://vocab.nerc.ac.uk/collection/P07/current/CFSN0461/"
+    },
+    "netcdf": {
+      "var_type": "float",
+      "other": ""
+    }
+  },
+  {
+    "name": {
+      "default": "fc",
+      "cf": "coriolis_parameter",
+      "open_oa": "",
+      "iec_61400-25": "",
+      "lidaco": "",
+      "grib": "",
+      "other": []
+    },
+    "description": "The Coriolis parameter is twice the component of the earth's angular velocity about the local vertical i.e. 2 W sin L, where L is latitude and W the angular speed of the earth",
+    "units": "s-1",
+    "ref": {
+      "nvs": ""
+    },
+    "netcdf": {
+      "var_type": "float",
+      "other": ""
+    }
+  },
+  {
+    "name": {
+      "default": "height",
+      "cf": "height",
+      "open_oa": "",
+      "iec_61400-25": "",
+      "lidaco": "",
+      "grib": "",
+      "other": []
+    },
+    "description": "Height is the vertical distance above the surface.",
+    "units": "m",
+    "ref": {
+      "nvs": ""
+    },
+    "netcdf": {
+      "var_type": "float",
+      "other": ""
+    }
+  },
+  {
+    "name": {
+      "default": "Ug",
+      "cf": "geostrophic_eastward_wind",
+      "open_oa": "",
+      "iec_61400-25": "",
+      "lidaco": "",
+      "grib": "33 E132",
+      "other": []
+    },
+    "description": "Eastward indicates a vector component which is positive when directed eastward (negative westward). Wind is defined as a two-dimensional (horizontal) air velocityvector, with no vertical component. (Vertical motion in the atmosphere has the standard name upward_air_velocity.)",
+    "units": "m s-1",
+    "positive" : "east",
+    "ref": {
+      "nvs": "http://vocab.nerc.ac.uk/collection/P07/current/CFSN0461/"
+    },
+    "netcdf": {
+      "var_type": "float",
+      "other": ""
+    }
+  },
+  {
+    "name": {
+      "default": "Vg",
+      "cf": "geostrophic_northward_wind",
+      "open_oa": "",
+      "iec_61400-25": "",
+      "lidaco": "",
+      "grib": "34 E132",
+      "other": []
+    },
+    "description": "Northward indicates a vector component which is positive when directed northward (negative southward). Wind is defined as a two-dimensional (horizontal) air velocity vector, with no vertical component. (Vertical motion in the atmosphere has the standard name upward_air_velocity.)",
+    "units": "m s-1",
+    "positive" : "north",
+    "ref": {
+      "nvs": "http://vocab.nerc.ac.uk/collection/P07/current/CFSN0461/"
+    },
+    "netcdf": {
+      "var_type": "float",
+      "other": ""
+    }
+  },
+  {
+    "name": {
+      "default": "PSFC",
+      "cf": "surface_air_pressure",
+      "open_oa": "",
+      "iec_61400-25": "",
+      "lidaco": "",
+      "grib": "E132",
+      "other": []
+    },
+    "description": "The surface called \"surface\" means the lower boundary of the atmosphere. Air pressure is the force per unit area which would be exerted when the moving gas molecules of which the air is composed strike a theoretical surface of any orientation.",
+    "units": "Pa",
+    "ref": {
+      "nvs": ""
+    },
+    "netcdf": {
+      "var_type": "float",
+      "other": ""
+    }
+  },
+  {
+    "name": {
+      "default": "LH",
+      "cf": "surface_upward_latent_heat_flux",
+      "open_oa": "",
+      "iec_61400-25": "",
+      "lidaco": "",
+      "grib": "121 E147",
+      "other": []
+    },
+    "description": "LATENT HEAT FLUX AT THE SURFACE",
+    "units": "W m-2",
+    "ref": {
+      "nvs": ""
+    },
+    "netcdf": {
+      "var_type": "float",
+      "other": ""
+    }
+  },
+  {
+    "name": {
+      "default": "UADV",
+      "cf": "advective_momentum_eastward",
+      "open_oa": "",
+      "iec_61400-25": "",
+      "lidaco": "",
+      "grib": "",
+      "other": []
+    },
+    "description": "Advective momentum RHS term (divided by fc) eastward component",
+    "units": "m s-1",
+    "positive" : "east",
+    "ref": {
+      "nvs": ""
+    },
+    "netcdf": {
+      "var_type": "float",
+      "other": ""
+    }
+  },
+  {
+    "name": {
+      "default": "VADV",
+      "cf": "advective_momentum_northward",
+      "open_oa": "",
+      "iec_61400-25": "",
+      "lidaco": "",
+      "grib": "",
+      "other": []
+    },
+    "description": "Advective momentum RHS term (divided by fc) northward component",
+    "units": "m s-1",
+    "positive" : "north",
+    "ref": {
+      "nvs": ""
+    },
+    "netcdf": {
+      "var_type": "float",
+      "other": ""
+    }
+  },
+  {
+    "name": {
+      "default": "POT_ADV",
+      "cf": "air_potential_temperature_advection",
+      "open_oa": "",
+      "iec_61400-25": "",
+      "lidaco": "",
+      "grib": "",
+      "other": []
+    },
+    "description": "Potential temperature advective RHS term",
+    "units": "K s-1",
+    "ref": {
+      "nvs": ""
+    },
+    "netcdf": {
+      "var_type": "float",
+      "other": ""
+    }
+  },
+  {
+    "name": {
+      "default": "RHO",
+      "cf": "air_density",
+      "open_oa": "",
+      "iec_61400-25": "",
+      "lidaco": "",
+      "grib": "89",
+      "other": []
+    },
+    "description": "Air density",
+    "units": "kg/m-3",
+    "ref": {
+      "nvs": ""
+    },
+    "netcdf": {
+      "var_type": "float",
+      "other": ""
+    }
+  },
+  {
+    "name": {
+      "default": "wt",
+      "cf": "kinematic_upward_sensible_heat_flux_surface",
+      "open_oa": "",
+      "iec_61400-25": "",
+      "lidaco": "",
+      "grib": "",
+      "other": []
+    },
+    "description": "Kinematic Upward sensible heat flux at surface wt = HFX/(rho*Cp)",
+    "units": "K m s-1",
+    "ref": {
+      "nvs": ""
+    },
+    "netcdf": {
+      "var_type": "float",
+      "other": ""
+    }
+  },
+   {
+    "name": {
+      "default": "latTurb",
+      "cf": "wind_turbine_latitude",
+      "open_oa": "",
+      "iec_61400-25": "",
+      "lidaco": "",
+      "grib": "",
+      "positive" : "north",
+      "other": []
+    },
+    "description": "Latitudes from the wind turbines",
+    "units": "degrees_north",
+    "ref": {
+      "nvs": ""
+    },
+    "netcdf": {
+      "var_type": "float",
+      "other": ""
+    }
+  },
+  {
+    "name": {
+      "default": "lonTurb",
+      "cf": "wind_turbine_longitude",
+      "open_oa": "",
+      "iec_61400-25": "",
+      "lidaco": "",
+      "grib": "",
+      "positive" : "east",
+      "other": []
+    },
+    "description": "Longitudes from the wind turbines",
+    "units": "degrees_east",
+    "ref": {
+      "nvs": ""
+    },
+    "netcdf": {
+      "var_type": "float",
+      "other": ""
+    }
+  },
+  {
+    "name": {
+      "default": "wind_dir",
+      "cf": "wind_direction",
+      "open_oa": "",
+      "iec_61400-25": "",
+      "lidaco": "",
+      "grib": "",
+      "other": []
+    },
+    "description": "Wind direction from the meteorological convention : North = 0 degrees",
+    "units": "degrees",
+    "ref": {
+      "nvs": ""
+    },
+    "netcdf": {
+      "var_type": "float",
+      "other": ""
+    }
+  },
+  {
+    "name": {
+      "default": "U_class",
+      "cf": "eastward_wind_dir_stability",
+      "open_oa": "",
+      "iec_61400-25": "",
+      "lidaco": "",
+      "grib": "33 E132",
+      "other": []
+    },
+    "description": "3D eastward component of wind speed [atmospheric stability analysis by wind direction]",
+    "units": "m s-1",
+    "positive" : "east",
+    "ref": {
+      "nvs": ""
+    },
+    "netcdf": {
+      "var_type": "float",
+      "other": ""
+    }
+  },
+  {
+    "name": {
+      "default": "V_class",
+      "cf": "northward_wind_dir_stability",
+      "open_oa": "",
+      "iec_61400-25": "",
+      "lidaco": "",
+      "grib": "34 E132",
+      "other": []
+    },
+    "description": "3D northward component of wind speed [atmospheric stability analysis by wind direction]",
+    "units": "m s-1",
+    "positive" : "north",
+    "ref": {
+      "nvs": ""
+    },
+    "netcdf": {
+      "var_type": "float",
+      "other": ""
+    }
+  },
+  {
+    "name": {
+      "default": "wind_speed_class",
+      "cf": "wind_speed_dir_stability",
+      "open_oa": "windspeed_ms",
+      "iec_61400-25": "MetAlt1HorWdSpd",
+      "lidaco": "",
+      "grib": "31",
+      "other": [
+        "ws",
+        "wind speed"
+      ]
+    },
+    "description": "Wind speed [atmospheric stability analysis by wind direction]",
+    "units": "m s-1",
+    "ref": {
+      "nvs": ""
+    },
+    "netcdf": {
+      "var_type": "float",
+      "other": ""
+    }
+  },
+  {
+    "name": {
+      "default": "TKE_class",
+      "cf": "turbulent_kinetic_energy_dir_stability",
+      "open_oa": "",
+      "iec_61400-25": "",
+      "lidaco": "",
+      "grib": "158",
+      "other": []
+    },
+    "description": "Turbulent kinetic energy obtained from 0.5*QKE [atmospheric stability analysis by wind direction]",
+    "units": "J/kg",
+    "ref": {
+      "nvs": ""
+    },
+    "netcdf": {
+      "var_type": "float",
+      "other": ""
+    }
+  },
+  {
+    "name": {
+      "default": "ndata_class",
+      "cf": "number_of_observations_class_dir_stability",
+      "open_oa": "",
+      "iec_61400-25": "",
+      "lidaco": "",
+      "grib": "",
+      "other": []
+    },
+    "description": "Number of records in each average [atmospheric stability analysis by wind direction]",
+    "units": "",
+    "ref": {
+      "nvs": ""
+    },
+    "netcdf": {
+      "var_type": "double",
+      "other": ""
+    }
+  }
+]
+
