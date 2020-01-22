@@ -5,7 +5,7 @@ OWA Wake Modeling Challenge
 
 Background 
 =========================
-The `OWA Wake Modeling Challenge <https://www.carbontrust.com/media/677495/owa-wake-modelling-challenge_final-feb27.pdf>`_ is an Offshore Wind Accelerator (OWA) project that aims to improve confidence in wake models in the prediction of array efficiency. A benchmarking process comprising 6 wind farms allows wake model developers and end-users test their array efficiency prediction methodologies over a wide range of wind climate and wind farm layout conditions.
+The `OWA Wake Modeling Challenge <https://www.carbontrust.com/media/677495/owa-wake-modelling-challenge_final-feb27.pdf>`_ is an Offshore Wind Accelerator (OWA) project that aims to improve confidence in wake models in the prediction of array efficiency. A benchmarking process comprising 5 wind farms allows wake model developers and end-users test their array efficiency prediction methodologies over a wide range of wind climate and wind farm layout conditions.
 
 The project is integrated in the `IEA Task 31 Wakebench <https://community.ieawind.org/task31/home>`_ international framework for wind farm modeling and evaluation.
 
@@ -13,7 +13,7 @@ Scope and Objectives
 ====================
 The `Anholt benchmark <https://thewindvaneblog.com/the-owa-anholt-array-efficiency-benchmark-436fc538597d>`_ has been a pilot to define, together with the participants, an open-source model evaluation methodology for array efficiency prediction which is available in this github repository. 
 
-The challenge has been extended to `6 offshore wind farms <https://thewindvaneblog.com/owa-wake-modelling-challenge-extended-to-6-offshore-wind-farms-c76d1ae645c2>`_ to perform a multi-site assessment. The benchmarks are set up as a blind test so you won’t be able to access observational data. Instead, mesoscale simulation data is available for the modeller to decide on the best interpretation of the input data for the specific needs of the wake model. 
+The challenge has been extended to `5 offshore wind farms <https://thewindvaneblog.com/owa-wake-modelling-challenge-extended-to-6-offshore-wind-farms-c76d1ae645c2>`_ to perform a multi-site assessment. The benchmarks are set up as a blind test so you won’t be able to access observational data. Instead, mesoscale simulation data is available for the modeller to decide on the best interpretation of the input data for the specific needs of the wake model. 
 
 Benchmark participants are encouraged to test test the evaluation scripts of this repository, based on Jupyter notebooks, on own simulation data and submit their best predictions. It is also the best way to guarantee that the output data is submitted in the right format for post-processing. 
 
