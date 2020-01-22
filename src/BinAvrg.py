@@ -15,6 +15,7 @@ from IPython.display import Markdown
 import xarray as xr
 from matplotlib import ticker as mtick
 import matplotlib.gridspec as gridspec
+import warnings
     
 def plot_wf_layout(x,y,labels = [],figsize=(12,6), data = [],vmin = np.nan,vmax = np.nan):
     if len(data)==0:
@@ -53,23 +54,156 @@ def centroid(arr):
     sum_y = np.sum(arr[:, 1])
     return sum_x/length, sum_y/length
 
-def plot_transect(data,val_data,meso_data,obs_Pfree_data,wt_list,turbines,rot_d,sim_name,WDbin,zLbin,highlight,ylim1,ylim2,figsize,wtref):
-    n_wt = len(wt_list)
-    n_sim = data.shape[0]
+def plot_eta_WD_zL(sims, plotresults, sim_eta, bias, bench_eta, N_WDzL_speed, validation):   
+       
+    eta_zL = sim_eta.mean(axis = 1, skipna = True).to_pandas() # array efficiency vs wind direction 
+    bias_zL = bias.mean(axis = 1, skipna = True).to_pandas()   # bias vs wind direction [%] 
+    N_zL = N_WDzL_speed.sum(axis = 0, skipna = True) # sample count
+
+    eta_WD = sim_eta.mean(axis = 2, skipna = True).to_pandas() # array efficiency vs wind direction 
+    bias_WD = bias.mean(axis = 2, skipna = True).to_pandas()   # bias vs wind direction [%] 
+    N_WD = N_WDzL_speed.sum(axis = 1, skipna = True) # sample count
     
+    zLbins_label = sim_eta.coords['zL'].values.tolist()
+    WDbins_label = sim_eta.coords['wd'].values.tolist()
+    
+    eta_zL = eta_zL.loc[sims['ID'][plotresults]] # plot only these simulations
+    eta_zL.reset_index(level=0, inplace=True)
+    eta_zL = pd.melt(eta_zL, id_vars=['sim'], value_vars=zLbins_label)
+    eta_zL.rename(columns={'value':'eta'}, inplace=True)
+    eta_zL['Input'] = 'wakes' # initialize
+    eta_zL['K'] = 0           # initialize
+    eta_zL['Model'] = 'model' # initialize 
+    for isim in range(len(plotresults)):
+        eta_zL.loc[eta_zL['sim']==sims['ID'][plotresults[isim]],'Input'] = sims['Input'][plotresults[isim]]
+        eta_zL.loc[eta_zL['sim']==sims['ID'][plotresults[isim]],'K'] = sims['Remarks'][plotresults[isim]].partition('K = ')[2]
+        eta_zL.loc[eta_zL['sim']==sims['ID'][plotresults[isim]],'Model'] = sims['Model Type'][plotresults[isim]]
+
+    bias_zL = bias_zL.loc[sims['ID'][plotresults]] # plot only these simulations
+    bias_zL.reset_index(level=0, inplace=True)
+    bias_zL = pd.melt(bias_zL, id_vars=['sim'], value_vars=zLbins_label)
+    bias_zL.rename(columns={'value':'bias'}, inplace=True)
+    bias_zL['Input'] = 'wakes' # initialize
+    bias_zL['K'] = 0           # initialize
+    bias_zL['Model'] = 'model' # initialize 
+    for isim in range(len(plotresults)):
+        bias_zL.loc[eta_zL['sim']==sims['ID'][plotresults[isim]],'Input'] = sims['Input'][plotresults[isim]]
+        bias_zL.loc[eta_zL['sim']==sims['ID'][plotresults[isim]],'K'] = sims['Remarks'][plotresults[isim]].partition('K = ')[2]
+        bias_zL.loc[eta_zL['sim']==sims['ID'][plotresults[isim]],'Model'] = sims['Model Type'][plotresults[isim]]
+
+    eta_WD = eta_WD.loc[sims['ID'][plotresults]] # plot only these simulations
+    eta_WD.reset_index(level=0, inplace=True)
+    eta_WD = pd.melt(eta_WD, id_vars=['sim'], value_vars=WDbins_label)
+    eta_WD.rename(columns={'value':'eta'}, inplace=True)
+    eta_WD['Input'] = 'wakes' # initialize
+    eta_WD['K'] = 0           # initialize
+    eta_WD['Model'] = 'model' # initialize 
+    for isim in range(len(plotresults)):
+        eta_WD.loc[eta_WD['sim']==sims['ID'][plotresults[isim]],'Input'] = sims['Input'][plotresults[isim]]
+        eta_WD.loc[eta_WD['sim']==sims['ID'][plotresults[isim]],'K'] = sims['Remarks'][plotresults[isim]].partition('K = ')[2]
+        eta_WD.loc[eta_WD['sim']==sims['ID'][plotresults[isim]],'Model'] = sims['Model Type'][plotresults[isim]]
+
+    bias_WD = bias_WD.loc[sims['ID'][plotresults]] # plot only these simulations
+    bias_WD.reset_index(level=0, inplace=True)
+    bias_WD = pd.melt(bias_WD, id_vars=['sim'], value_vars=WDbins_label)
+    bias_WD.rename(columns={'value':'bias'}, inplace=True)
+    bias_WD['Input'] = 'wakes' # initialize
+    bias_WD['K'] = 0           # initialize
+    bias_WD['Model'] = 'model' # initialize 
+    for isim in range(len(plotresults)):
+        bias_WD.loc[eta_WD['sim']==sims['ID'][plotresults[isim]],'Input'] = sims['Input'][plotresults[isim]]
+        bias_WD.loc[eta_WD['sim']==sims['ID'][plotresults[isim]],'K'] = sims['Remarks'][plotresults[isim]].partition('K = ')[2]
+        bias_WD.loc[eta_WD['sim']==sims['ID'][plotresults[isim]],'Model'] = sims['Model Type'][plotresults[isim]]
+
+    f1 = plt.figure(figsize = (14,8), constrained_layout = True)   
+    spec = gridspec.GridSpec(ncols=2, nrows=2, figure=f1, width_ratios=[2, 0.6], height_ratios=[2, 1])    
+
+    f1_ax1 = f1.add_subplot(spec[0, 0])
+    if validation:
+        eta_obs_WD = bench_eta.mean(axis = 1, skipna = True).to_pandas()
+        eta_obs_WD.plot(grid=1, marker='s', markerfacecolor='grey', linewidth = 3, markeredgecolor= 'k', 
+                        markersize = 8, color = 'k', linestyle='--', label = 'Observations', ax = f1_ax1)
+    f1_ax1 = sns.lineplot(x='wd', y='eta', hue='Input', style = 'Model', data=eta_WD, 
+                          sort=False, legend=False, ax = f1_ax1)
+    f1_ax1.set_xticklabels(WDbins_label)
+    f1_ax1.set_ylabel('Array Efficiency [%]')
+    f1_ax1.grid(True)
+    #f1_ax1.get_legend().remove()
+    f1_ax1.set_ylim([40,90])
+    f1_ax1b=f1_ax1.twinx()
+    N_WD.plot.bar(color = 'silver', ax = f1_ax1b)
+    f1_ax1b.set_yticks([0,50,100,150,200])
+    f1_ax1b.set_ylim([0,1000])
+
+    f1_ax2 = f1.add_subplot(spec[1, 0], sharex=f1_ax1)
+    f1_ax2 = sns.barplot(x='wd', y='bias', hue='Input', data=bias_WD, ax = f1_ax2)
+    f1_ax2.set_ylabel('BIAS [%]')
+    f1_ax2.get_legend().remove()
+    f1_ax2.set_ylim([-20,20])
+    f1_ax2.grid(True)
+
+    f1_ax3 = f1.add_subplot(spec[0, 1], sharey=f1_ax1)
+    if validation:
+        eta_obs_zL = bench_eta.mean(axis = 0, skipna = True).to_pandas()
+        eta_obs_zL.plot(grid=1, marker='s', markerfacecolor='grey', linewidth = 2, markeredgecolor= 'k', 
+                        markersize = 8, color = 'k', linestyle='--', label = 'Observations', ax = f1_ax3)
+    f1_ax3 = sns.lineplot(x='zL', y='eta', hue='Input', style = 'Model', data=eta_zL, 
+                          sort=False, ax = f1_ax3)
+    f1_ax3.grid(True)
+    f1_ax3.legend(loc = 'upper left', bbox_to_anchor=(1, 1))
+    f1_ax3b=f1_ax3.twinx()
+    N_zL.plot.bar(color = 'silver', ax = f1_ax3b)
+    f1_ax3b.set_yticks([0,100,200,300,400,500])
+    f1_ax3b.set_ylim([0,1500])
+    f1_ax3b.set_ylabel('Samples')
+    f1_ax3b.yaxis.set_label_coords(1.2,0.1)
+    f1_ax3.set_xticklabels('')
+    f1_ax3.set_xlabel('')
+
+    f1_ax4 = f1.add_subplot(spec[1, 1], sharex=f1_ax3, sharey=f1_ax2)
+    f1_ax4 = sns.barplot(x='zL', y='bias', hue='Input', data=bias_zL, ax = f1_ax4)
+    f1_ax4.legend(loc = 'upper left', bbox_to_anchor=(1, 1))
+    #f1_ax4.set_yticklabels('')
+    f1_ax4.set_ylabel('')
+    f1_ax4.grid(True)
+
+    return f1_ax1, f1_ax2, f1_ax3, f1_ax4
+
+def plot_transect(data,val_data,meso_data,obsPfree_data,wt_list,turbines,Drot,sims,plotresults,WDbin,zLbin,highlight,ylim1,ylim2,figsize,wtnorm,validation):
+    # Normalize based on wtnorm position
+    if wtnorm == 'ref':
+        datanorm = data[wt_list].div(data.mean(axis = 1), axis=0)
+        valdatanorm = val_data[wt_list].div(val_data.mean())
+    else:
+        datanorm = data[wt_list].div(data[wtnorm], axis=0)
+        valdatanorm = val_data[wt_list].div(val_data[wtnorm].mean())
+
+    datanorm = datanorm.loc[sims['ID'][plotresults]] # plot only these simulations
+    datanorm.reset_index(level=0, inplace=True)
+    datanorm_sns = pd.melt(datanorm, id_vars=['sim'], value_vars=wt_list)
+    datanorm_sns.rename(columns={'value':'P'}, inplace=True)
+    datanorm_sns['Input'] = 'wakes' # initialize
+    datanorm_sns['K'] = 0           # initialize
+    datanorm_sns['Model'] = 'model' # initialize 
+    for isim in range(len(plotresults)):
+        datanorm_sns.loc[datanorm_sns['sim']==sims['ID'][plotresults[isim]],'Input'] = sims['Input'][plotresults[isim]]
+        datanorm_sns.loc[datanorm_sns['sim']==sims['ID'][plotresults[isim]],'K'] = sims['Remarks'][plotresults[isim]].partition('K = ')[2]
+        datanorm_sns.loc[datanorm_sns['sim']==sims['ID'][plotresults[isim]],'Model'] = sims['Model Type'][plotresults[isim]]
+
+    n_wt = len(wt_list)
+
     #compute distances to first turbine
     a = turbines.loc[turbines['VDC ID'] == wt_list[0],['X coordinate','Y coordinate']].values.flatten()            
     dists = []
     coords = np.zeros((n_wt,2))
     for wt in range(n_wt):
         b = turbines.loc[turbines['VDC ID'] == wt_list[wt],['X coordinate','Y coordinate']].values.flatten()
-        dists.append(((a[0]-b[0])**2+(a[1]-b[1])**2)**0.5 / rot_d)
+        dists.append(((a[0]-b[0])**2+(a[1]-b[1])**2)**0.5 / Drot)
         coords[wt,:]=b
-         
+
     f1 = plt.figure(figsize = figsize)   # constrained_layout=True
-    spec = gridspec.GridSpec(ncols=2, nrows=2, figure=f1, width_ratios=[1, 1.5], height_ratios=[2, 1])
-    # plot layout highlighting the transect
-    
+    spec = gridspec.GridSpec(ncols=2, nrows=2, figure=f1, width_ratios=[1, 1.5], height_ratios=[2, 1])    
+
     iwt = [x in wt_list for x in turbines['VDC ID']]
     f1_ax1 = f1.add_subplot(spec[:, 0])
     f1_ax1.scatter(turbines['X coordinate'],turbines['Y coordinate'],c='silver', marker = 'o', s=20)
@@ -83,67 +217,54 @@ def plot_transect(data,val_data,meso_data,obs_Pfree_data,wt_list,turbines,rot_d,
     f1_ax1.spines['right'].set_visible(False)
     f1_ax1.get_xaxis().set_ticks([])
     f1_ax1.get_yaxis().set_ticks([])
-       
+
     f1_ax2 = f1.add_subplot(spec[0, 1])
-    if wtref == 'ref':
-        data[wt_list].div(data.mean(axis = 1), axis=0).T.plot(ax = f1_ax2, color = 'lightgrey')
-        data[wt_list].div(data.mean(axis = 1), axis=0).T.plot(y = highlight, ax = f1_ax2, label = sim_name)
-        data[wt_list].div(data.mean(axis = 1), axis=0).T.plot(y = 'ensemble', ax = f1_ax2, linewidth = 3, 
-                                                              color = 'k',linestyle='-.', label = 'ensemble') 
-        if np.sum(data.loc['ensemble']-val_data)!=0.0:
-            val_data[wt_list].div(val_data.mean()).plot(marker='s', markerfacecolor='cyan', linewidth = 3, 
-                                                        markeredgecolor= 'k', markersize = 8, color = 'cyan', linestyle='--', 
-                                                        ax = f1_ax2, label = 'Observations') 
-    else:
-        data[wt_list].div(data[wtref], axis=0).T.plot(ax = f1_ax2, color = 'lightgrey')        
-        data[wt_list].div(data[wtref], axis=0).T.plot(y = highlight, ax = f1_ax2, label = sim_name)
-        data[wt_list].div(data[wtref], axis=0).T.plot(y = 'ensemble', ax = f1_ax2, linewidth = 3, 
-                                                      color = 'k', linestyle='-.', label = 'ensemble')
-        if np.sum(data.loc['ensemble']-val_data)!=0.0:
-            val_data[wt_list].div(val_data[wt_ref]).plot(marker='s', markerfacecolor='cyan', linewidth = 3,
-                       markeredgecolor= 'k',  markersize = 8, color = 'cyan', linestyle='--', ax = f1_ax2, 
-                       label = 'Observations', yerr = val_data[wt_list].div(val_data[wt_ref]))
-    
-    current_handles, current_labels = plt.gca().get_legend_handles_labels() 
-    f1_ax2.legend(current_handles[n_sim:], current_labels[n_sim:],
-                 loc = 'upper left', bbox_to_anchor=(1, 1)) # avoid lightgrey sims in the legend
+    if validation:
+        valdatanorm.plot(marker='s', markerfacecolor='grey', linewidth = 2, markeredgecolor= 'k', 
+                         markersize = 8, color = 'k', linestyle='--', ax = f1_ax2, label = 'Observations')
+    f1_ax2 = sns.lineplot(x='wt', y='P', hue='Input', style = 'Model', data=datanorm_sns) 
+    #f1_ax2.legend(loc = 'upper left', bbox_to_anchor=(1, 1)) 
     f1_ax2.set_ylim(ylim1)
     f1_ax2.set_xlabel(None)
-    if wtref == 'ref':
-        f1_ax2.set_ylabel('Net Power Ratio: $P/P_{ref}$')  
+    if wtnorm == 'ref':
+        f1_ax2.set_ylabel('Net Power Ratio = $P/P_{ref}$')  
     else:
-        f1_ax2.set_ylabel(f'Net Power Ratio: $P/P_{wtref}$')  
-    #f1_ax2.set_xlabel('Distance from first turbine (D)')
+        f1_ax2.set_ylabel('Net Power Ratio = P/P$_{}$'.format(wtnorm))  
     f1_ax2.set_title('Transect '+wt_list[0]+'-'+wt_list[-1]+' ('+WDbin+', '+zLbin+')')
     f1_ax2.grid(True)
-#    for wt in range(n_wt):
-#        f1_ax2.text(dists[wt],0.5,wt_list[wt],rotation=90.,color='k')
-    
-    meso_P_ratio = meso_data.reindex(wt_list)
-    obs_Pfree_ratio = obs_Pfree_data.reindex(wt_list)
-    if wtref == 'ref':
-        meso_P0 = meso_data.mean()
-        obs_Pfree_P0 = obs_Pfree_data.mean()
-    else:
-        meso_P0 = meso_data.loc[wtref]
-        obs_Pfree_P0 = obs_Pfree_data.loc[wtref]
-    meso_P_ratio = meso_P_ratio/meso_P0
-    obs_Pfree_ratio = obs_Pfree_ratio/obs_Pfree_P0
-    
-    f1_ax3 = f1.add_subplot(spec[1, 1])
-    f1_ax3.plot(wt_list,meso_P_ratio,'-.k',linewidth = 3,label = 'Meso')
-    f1_ax3.plot(wt_list,obs_Pfree_ratio,marker='s', markerfacecolor='cyan', linewidth = 3,
-                       markeredgecolor= 'k',  markersize = 8, color = 'cyan', linestyle='--', label = 'Obs')
-    if wtref == 'ref':
-        f1_ax3.set_ylabel('Gross Power Ratio: $P(S)/P(S_{ref})$', color='b') 
-    else:
-        f1_ax3.set_ylabel(f'Gross Power Ratio: $P(S)/P(S_{wtref})$', color='b')    
+    f1_ax2.margins(0.05)
 
-    f1_ax3.legend(loc = 'upper left', bbox_to_anchor=(1, 1))
+    meso_P_ratio = meso_data.reindex(wt_list)
+    if wtnorm == 'ref':
+        meso_P0 = meso_data.mean()
+    else:
+        meso_P0 = meso_data.loc[wtnorm]
+    meso_P_ratio = meso_P_ratio/meso_P0
+
+    if validation: 
+        obs_Pfree_ratio = obsPfree_data.reindex(wt_list)
+        if wtnorm == 'ref':
+            obs_Pfree_P0 = obsPfree_data.mean()
+        else:
+            obs_Pfree_P0 = obsPfree_data.loc[wtnorm]
+        obs_Pfree_ratio = obs_Pfree_ratio/obs_Pfree_P0
+
+    f1_ax3 = f1.add_subplot(spec[1, 1])
+    f1_ax3.plot(wt_list,meso_P_ratio,'-b',linewidth = 2,label = 'Meso')
+    if validation:
+        f1_ax3.plot(wt_list,obs_Pfree_ratio,marker='s', markerfacecolor='grey', linewidth = 2,
+                    markeredgecolor= 'k',  markersize = 8, color = 'k', linestyle='--', label = 'Obs')
+    if wtnorm == 'ref':
+        f1_ax3.set_ylabel('Gross Power Ratio = $P(S)/P(S_{ref})$') 
+    else:
+        f1_ax3.set_ylabel('Gross Power Ratio = P(S)/P(S$_{}$)'.format(wtnorm))    
+
+    f1_ax3.legend() #loc = 'upper left', bbox_to_anchor=(1, 1)
     f1_ax3.grid(True)
     f1_ax3.set_ylim(ylim2)
-    
-    plt.show()
+
+    xlim = f1_ax3.get_xlim()
+    f1_ax2.set_xlim(xlim)
   
     return f1_ax1,f1_ax2,f1_ax3
 
