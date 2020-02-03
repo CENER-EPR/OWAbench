@@ -54,7 +54,7 @@ def define_freestream(points,WD):
     return freestream
 
 
-siteID = 'Ormonde'
+siteID = 'Dudgeon'
 
 # Load wind farm layout data
 turbines = pd.read_csv('../' + siteID + '/inputs/' + siteID + '_layout.csv')
@@ -66,8 +66,17 @@ pwr_curve_inv = interpolate.interp1d(pwr_curve_file['Power'].values.flatten(),pw
                                 bounds_error = False, fill_value = 0) # inverse of the power curve
 
 # Load scada (power) data
-obs_ts = pd.read_csv('../' + siteID + '/observations/' + siteID + '_obs.csv', index_col = 'time') 
+ts = pd.read_csv('../' + siteID + '/observations/' + siteID + '_obs.csv', index_col = 'time') 
 #scada_flags = pd.read_csv('../' + siteID + '/inputs/' + siteID + '_flags.csv', index_col = 'Datetime') 
+P_fileout = '../' + siteID + '/observations/' + siteID + '_Pfree.csv' 
+S_fileout = '../' + siteID + '/observations/' + siteID + '_Sfree.csv' 
+
+
+# Load simulation data
+simID = 'dud02b'
+ts = pd.read_csv('../' + siteID + '/outputs/' + simID + '.csv', index_col = 'time') 
+P_fileout = '../' + siteID + '/outputs/' + simID + '_Pfree.csv' 
+S_fileout = '../' + siteID + '/outputs/' + simID + '_Sfree.csv' 
 
 # Load mesoscale data 
 try:
@@ -84,50 +93,44 @@ WDref = pd.Series(
         180 + np.arctan2(f.variables['U'][:].data,f.variables['V'][:].data)*180/np.pi,
         index = f.variables['Times'][:].data)
 
-Sref = Sref.reindex(obs_ts.index)
-WDref = WDref.reindex(obs_ts.index)
+Sref = Sref.reindex(ts.index)
+WDref = WDref.reindex(ts.index)
 
-Nobs = obs_ts.shape[0]
+N = ts.shape[0]
 points = turbines[['X coordinate','Y coordinate']].values
 #
 ## One freestream for all turbines (homogeneous inflow)
-#obs_S_ts = pd.Series(index = obs_ts.index)
-#obs_P_ts = pd.Series(index = obs_ts.index)
-#pbar = tqdm(total = Nobs, leave = False, position = 0, desc="Progress")
-#for t in range(Nobs):
+#S_ts = pd.Series(index = ts.index)
+#P_ts = pd.Series(index = ts.index)
+#pbar = tqdm(total = N, leave = False, position = 0, desc="Progress")
+#for t in range(N):
 #    WD = WDref.iloc[t]
 #    if not np.isnan(WD):
 #        freestream = define_freestream(points,WD)
-#        Pfree = np.mean(obs_ts.iloc[t,freestream])
+#        Pfree = np.mean(ts.iloc[t,freestream])
 #        if Pfree < pwr_curve_file['Power'].max():
-#            obs_S_ts.iloc[t] = pwr_curve_inv(Pfree)
-#            obs_P_ts.iloc[t] = Pfree
+#            S_ts.iloc[t] = pwr_curve_inv(Pfree)
+#            P_ts.iloc[t] = Pfree
 #    pbar.update(1)
 #pbar.close()
 
 # Individualized freestream based on front row of turbines (heterogeneous inflow) 
-obs_S_ts = pd.DataFrame(np.zeros((Nobs,Nwt)), index = obs_ts.index, columns = turbines['VDC ID'].values)
-obs_P_ts = pd.DataFrame(np.zeros((Nobs,Nwt)), index = obs_ts.index, columns = turbines['VDC ID'].values)
-pbar = tqdm(total = Nobs, leave = False, position = 0, desc="Progress")
-for t in range(Nobs):
+S_ts = pd.DataFrame(np.zeros((N,Nwt)), index = ts.index, columns = turbines['VDC ID'].values)
+P_ts = pd.DataFrame(np.zeros((N,Nwt)), index = ts.index, columns = turbines['VDC ID'].values)
+pbar = tqdm(total = N, leave = False, position = 0, desc="Progress")
+for t in range(N):
     WD = WDref.iloc[t]
     if not np.isnan(WD):
         freestream = define_freestream(points,WD)
-        f1 = interpolate.NearestNDInterpolator(points[freestream], obs_ts.iloc[t,freestream])
+        f1 = interpolate.NearestNDInterpolator(points[freestream], ts.iloc[t,freestream])
         Pfree = f1(points)
-        obs_S_ts.iloc[t] = pwr_curve_inv(Pfree)
-        obs_P_ts.iloc[t] = Pfree.values
+        S_ts.iloc[t] = pwr_curve_inv(Pfree)
+        P_ts.iloc[t] = Pfree.values
     pbar.update(1)
 pbar.close()
 
-#fileout = '../' + siteID + '/observations/' + siteID + '_Sobs.csv' 
-#obs_S_ts.to_frame().to_csv(fileout)
-
-fileout = '../' + siteID + '/observations/' + siteID + '_Pfree.csv' 
-#obs_P_ts.to_csv(fileout)
-
-fileout = '../' + siteID + '/observations/' + siteID + '_Sfree.csv' 
-obs_S_ts.to_csv(fileout)
+#P_ts.to_csv(P_fileout)
+S_ts.to_csv(S_fileout)
 
 # Load bin-averaged local mesoscale bias correction factors Am
 Sbins = np.array([8,10])              # around the maximum of the trust coefficient 
@@ -154,12 +157,6 @@ ax.set_xlabel('X [m]')
 ax.set_ylabel('Y [m]')
 ax.set_title(r'$A_{M,i}$ ('+ WDbin + ',' + zLbin + ')')
 ax.grid()
-
-# Apply mean corrections to mesoscale input data
-
-
-# Generate netcdf input 
-#fileout = '../' + siteID + '/input/' + siteID + '_Wakes_WindTurbines_corrected.csv' 
 
 
 ### Test freestream function
@@ -216,7 +213,7 @@ point_ref = Point(alpha_shape.centroid)
 vmin = 4
 vmax = 6
 
-data0 = obs_ts.iloc[t,:]
+data0 = ts.iloc[t,:]
 cmap=plt.cm.get_cmap('jet',10)
 fig, ax = plt.subplots(1, 2, figsize=(12,6), sharey = True)
 sc0 = ax[0].scatter(turbines['X coordinate'],turbines['Y coordinate'],
@@ -234,7 +231,7 @@ ax[0].set_ylabel('Y [m]')
 ax[0].set_title(r'$P_{obs}$')
 ax[0].grid()
 
-data1 = obs_P_ts.iloc[t,:]
+data1 = P_ts.iloc[t,:]
 sc1 = ax[1].scatter(turbines['X coordinate'],turbines['Y coordinate'],
                      marker='o',c=data1,cmap=cmap,edgecolors ='k', vmin=vmin, vmax=vmax)
 #plt.colorbar(sc1,ax=ax[1])

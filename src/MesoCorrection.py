@@ -13,16 +13,15 @@ from constants_and_functions import *
 from datetime import timedelta
 import matplotlib.pyplot as plt
 
-site = 'Ormonde'
+site = 'WestermostRough'
+outputSCADA = False # = True to include U_scada,V_scada (only with permission from data owners)
+outputFile_wind_turbines = "../" + site + "/inputs/" + site + "_Wakes_WindTurbines_corrected.nc"
+outputFile_ref = "../" + site + "/inputs/" + site + "_Wakes_ref_corrected.nc"
 
 file_wind_turbines = "../" + site + "/inputs/" + site + "_Wakes_WindTurbines.nc"
 file_ref = "../" + site + "/inputs/" + site + "_Wakes_ref.nc"
 file_correction = "../" + site + "/inputs/" + site + "_Am.nc"
-
 file_scada = "../" + site + "/observations/" + site + "_Sfree.csv"
-
-outputFile_wind_turbines = "../" + site + "/inputs/" + site + "_Wakes_WindTurbines_corrected.nc"
-outputFile_ref = "../" + site + "/inputs/" + site + "_Wakes_ref_corrected.nc"
 
 num_sectores = 12
 sec_Labels =['NNE','ENE','E','ESE','SSE','S','SSW','WSW','W','WNW','NNW',"N"]
@@ -90,7 +89,9 @@ secInt = 360 / num_sectores
 centeredBins = np.arange(0 + secInt / 2, 360 + secInt / 2 + secInt, secInt)
 
 # Stability
-zLBins = [-0.2, -0.02, 0.02, 0.2]
+# While the correction factors where generated for bins capped at zL = -0.2 (u) and zL= 0.2 (s) we extend the limits
+# to infinity to apply the correction factors to vu and vs classes that would otherwise show NaN values in u_corr,v_corr
+zLBins = [-np.inf, -0.02, 0.02, np.inf]
 
 tsU_corr_df = pd.DataFrame()
 tsV_corr_df = pd.DataFrame()
@@ -109,7 +110,7 @@ for i, turb in enumerate(turb_id):
     factor_turb.columns = ['zLBins', 'sector', 'factor']
 
     # Stability
-    zL = 10 / L[:, i].data
+    zL = 10 / L0[:, i].data
 
     scada_turb = scada[turb]
 
@@ -194,12 +195,13 @@ U_corr_nc[:] = tsU_corr_df.values
 V_corr_nc = ncClass.nc_create(f, 'V_corr', ('time', 'turbines'))
 V_corr_nc[:] = tsV_corr_df.values
 
-# Wind Components at hub height
-U_scada_nc = ncClass.nc_create(f, 'U_scada', ('time', 'turbines'))
-U_scada_nc[:] = tsU_scada_df.values
-
-V_scada_nc = ncClass.nc_create(f, 'V_scada', ('time', 'turbines'))
-V_scada_nc[:] = tsV_scada_df.values
+if outputSCADA:
+    # Wind Components at hub height
+    U_scada_nc = ncClass.nc_create(f, 'U_scada', ('time', 'turbines'))
+    U_scada_nc[:] = tsU_scada_df.values
+    
+    V_scada_nc = ncClass.nc_create(f, 'V_scada', ('time', 'turbines'))
+    V_scada_nc[:] = tsV_scada_df.values
 
 T2_nc = ncClass.nc_create(f, 'T2', ('time', 'turbines'))
 T2_nc[:] = T2
@@ -256,12 +258,13 @@ U_corr_nc[:] = tsU_corr_df.values.mean(axis = 1)
 V_corr_nc = ncClass.nc_create(f4, 'V_corr', ('time',))
 V_corr_nc[:] = tsV_corr_df.values.mean(axis = 1)
 
-# Wind Components at hub height
-U_scada_nc = ncClass.nc_create(f4, 'U_scada', ('time',))
-U_scada_nc[:] = tsU_scada_df.values.mean(axis = 1)
-
-V_scada_nc = ncClass.nc_create(f4, 'V_scada', ('time',))
-V_scada_nc[:] = tsV_scada_df.values.mean(axis = 1)
+if outputSCADA:
+    # Wind Components at hub height
+    U_scada_nc = ncClass.nc_create(f4, 'U_scada', ('time',))
+    U_scada_nc[:] = tsU_scada_df.values.mean(axis = 1)
+    
+    V_scada_nc = ncClass.nc_create(f4, 'V_scada', ('time',))
+    V_scada_nc[:] = tsV_scada_df.values.mean(axis = 1)
 
 T2_nc = ncClass.nc_create(f4, 'T2', ('time',))
 T2_nc[:] = T2.mean(axis = 1)

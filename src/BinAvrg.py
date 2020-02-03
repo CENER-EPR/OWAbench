@@ -16,7 +16,41 @@ import xarray as xr
 from matplotlib import ticker as mtick
 import matplotlib.gridspec as gridspec
 import warnings
+from scipy import interpolate
+import alphashape
+from shapely.geometry import Point, LineString
     
+def define_freestream(points,WD):
+    """
+    Define which turbines in the layout are in freestream conditions
+    Inputs:
+        - points: array with x,y coordinates [m]
+        - WD: wind direction 
+    Outputs:
+        - freestream: boolean array with freestream turbines = True   
+    """
+    raylength = 20000. # distance [m] upstream from the centroid to do ray-casting along a line that passes through each turbine in the boundary of the alphashape 
+             # make sure the ray is always out of the wind farm
+    sectorwidth = 45. # wind direction sector [deg] free of upstream turbines around the input wind direction 
+    alpha = 0.0004    # controls the tightness of the bounding shape to the layout (alpha = 0 returns the convex hull)
+    Nwt = points.shape[0] # number of turbines
+    
+    alpha_shape = alphashape.alphashape(points, alpha) # polygon of the wind farm to define turbines in freestream conditions (= turbines in the boundary)
+    freestream = np.zeros(Nwt, dtype=bool)
+    wd = np.array([WD - sectorwidth/2, WD + sectorwidth/2])
+    polarangle = (-wd + 90.)*np.pi/180. # from wind direction to polar angle
+    for wt in range(Nwt):
+        point_turbine = Point(points[wt,:])
+        point_upstream1 = Point(point_turbine.x + raylength*np.cos(polarangle[0]), point_turbine.y + raylength*np.sin(polarangle[0]))
+        point_upstream2 = Point(point_turbine.x + raylength*np.cos(polarangle[1]), point_turbine.y + raylength*np.sin(polarangle[1]))
+        if alpha_shape.exterior.distance(point_turbine) <= 10.: # turbine in the boundary
+            line1 = LineString([point_upstream1, point_turbine])
+            line2 = LineString([point_upstream2, point_turbine])
+            if (not line1.crosses(alpha_shape.exterior)) and (not line2.crosses(alpha_shape.exterior)):
+                freestream[wt] = True
+                
+    return freestream
+
 def plot_wf_layout(x,y,labels = [],figsize=(12,6), data = [],vmin = np.nan,vmax = np.nan):
     if len(data)==0:
         fig, ax = plt.subplots(figsize=figsize)
@@ -129,11 +163,11 @@ def plot_eta_WD_zL(sims, plotresults, sim_eta, bias, bench_eta, N_WDzL_speed, va
     f1_ax1.set_ylabel('Array Efficiency [%]')
     f1_ax1.grid(True)
     #f1_ax1.get_legend().remove()
-    f1_ax1.set_ylim([40,90])
+    f1_ax1.set_ylim([40,100])
     f1_ax1b=f1_ax1.twinx()
     N_WD.plot.bar(color = 'silver', ax = f1_ax1b)
-    f1_ax1b.set_yticks([0,50,100,150,200])
-    f1_ax1b.set_ylim([0,1000])
+    f1_ax1b.set_yticks([0,250,500,750,1000])
+    f1_ax1b.set_ylim([0,5000])
 
     f1_ax2 = f1.add_subplot(spec[1, 0], sharex=f1_ax1)
     f1_ax2 = sns.barplot(x='wd', y='bias', hue='Input', data=bias_WD, ax = f1_ax2)
@@ -153,8 +187,8 @@ def plot_eta_WD_zL(sims, plotresults, sim_eta, bias, bench_eta, N_WDzL_speed, va
     f1_ax3.legend(loc = 'upper left', bbox_to_anchor=(1, 1))
     f1_ax3b=f1_ax3.twinx()
     N_zL.plot.bar(color = 'silver', ax = f1_ax3b)
-    f1_ax3b.set_yticks([0,100,200,300,400,500])
-    f1_ax3b.set_ylim([0,1500])
+    f1_ax3b.set_yticks([0,1000,2000,3000,4000])
+    f1_ax3b.set_ylim([0,8000])
     f1_ax3b.set_ylabel('Samples')
     f1_ax3b.yaxis.set_label_coords(1.2,0.1)
     f1_ax3.set_xticklabels('')
@@ -222,8 +256,9 @@ def plot_transect(data,val_data,meso_data,obsPfree_data,wt_list,turbines,Drot,si
     if validation:
         valdatanorm.plot(marker='s', markerfacecolor='grey', linewidth = 2, markeredgecolor= 'k', 
                          markersize = 8, color = 'k', linestyle='--', ax = f1_ax2, label = 'Observations')
-    f1_ax2 = sns.lineplot(x='wt', y='P', hue='Input', style = 'Model', data=datanorm_sns) 
-    #f1_ax2.legend(loc = 'upper left', bbox_to_anchor=(1, 1)) 
+    f1_ax2 = sns.lineplot(x='wt', y='P', hue='Input', style = 'Model', data=datanorm_sns, sort=False) 
+    f1_ax2.set_xticklabels(wt_list)
+    f1_ax2.legend(loc = 'upper left', bbox_to_anchor=(1, 1)) 
     f1_ax2.set_ylim(ylim1)
     f1_ax2.set_xlabel(None)
     if wtnorm == 'ref':
@@ -267,6 +302,70 @@ def plot_transect(data,val_data,meso_data,obsPfree_data,wt_list,turbines,Drot,si
     f1_ax2.set_xlim(xlim)
   
     return f1_ax1,f1_ax2,f1_ax3
+
+def plot_transect_old(data,ref_data,meso_data,wt_list,turbines,rot_d,sim_name,WDbin,zLbin):
+    n_wt = len(wt_list)
+    
+    #compute distances
+    a = turbines.loc[turbines['VDC ID'] == wt_list[0],['X coordinate','Y coordinate']].values.flatten()
+    dists = []
+    coords = np.zeros((n_wt,2))
+    for wt in range(n_wt):
+        b = turbines.loc[turbines['VDC ID'] == wt_list[wt],['X coordinate','Y coordinate']].values.flatten()
+        dists.append(((a[0]-b[0])**2+(a[1]-b[1])**2)**0.5 / rot_d)
+        coords[wt,:]=b
+        
+    ref_data = ref_data.reindex(wt_list)
+#    ref_data_std = ref_data_std.reindex(wt_list) 
+ 
+    f1, ax = plt.subplots(1,2,figsize = (14,5))
+    # plot layout highlighting the transect
+    iwt = [x in wt_list for x in turbines['VDC ID']]
+    ax[0].scatter(turbines['X coordinate'],turbines['Y coordinate'],c='silver', s=6)
+    ax[0].scatter(turbines['X coordinate'][iwt],turbines['Y coordinate'][iwt],c='black',s=6)
+    ax[0].text(coords[0][0],coords[0][1],wt_list[0],{'ha': 'right'})
+    ax[0].text(coords[-1][0],coords[-1][1],wt_list[-1],{'ha': 'right'})
+    ax[0].axis('scaled')
+    ax[0].spines['top'].set_visible(False)
+    ax[0].spines['bottom'].set_visible(False)
+    ax[0].spines['left'].set_visible(False)
+    ax[0].spines['right'].set_visible(False)
+    ax[0].get_xaxis().set_ticks([])
+    ax[0].get_yaxis().set_ticks([])
+
+    #plot profiles of array efficiency ratio and mesoscale power ratio 
+    for index, row in data.iterrows():
+        eta = row.reindex(wt_list)
+        ax[1].plot(dists,eta/eta[0])
+    ax[1].plot(dists,ref_data/ref_data[0], marker='s', markerfacecolor='silver', markeredgecolor= 'k', color = 'k', linewidth = 3)
+    #ax[1].legend(np.append(sim_name, 'Ref'),bbox_to_anchor=(1.15, 1))
+    ax[1].set_ylim([0.4,1.2])    
+    ax[1].set_ylabel('$\eta/\eta_{0}$')
+    ax[1].set_title('Array efficiency ratio along transect '+wt_list[0]+'-'+wt_list[-1]+' ('+WDbin+', '+zLbin+')')
+    ax[1].grid(True)
+    for wt in range(n_wt):
+        ax[1].text(dists[wt],0.5,wt_list[wt],rotation=90.,color='k')
+
+    meso_P_ratio = meso_data.reindex(wt_list)
+    meso_P_ratio = meso_P_ratio/meso_P_ratio[0]
+    bx = ax[1].twinx()
+    bx.plot(dists,meso_P_ratio,'--b')
+    bx.set_ylabel('$(P_{0}/P)_{meso}$', color='b')
+
+    ax[1].yaxis.set_major_locator(mtick.LinearLocator(9))
+    bx.yaxis.set_major_locator(mtick.LinearLocator(9))
+
+#    plt.errorbar(x, y, e, linestyle='None', marker='^')
+#    x = dists
+#    y = ref_data/ref_data[0]
+#    e = ((1/ref_data[0]**2) * ref_data_std**2 + (ref_data**2/ref_data[0]**4) * ref_data_std[0]**2)**0.5 # asuuming independence     between ref_data and ref_data[0]
+#    ax[1].errorbar(x,y,e, marker='^', linestyle='None')
+
+    plt.tight_layout()
+    plt.show()
+  
+    return ax,bx
+
 
 def restrict_to_ts(data, ts):
     return data[~data.index.duplicated()].reindex(ts).dropna()
