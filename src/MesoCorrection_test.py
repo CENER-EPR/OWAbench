@@ -11,7 +11,7 @@ import pandas as pd
 import netCDF4
 import matplotlib.pyplot as plt
 
-siteID = 'Ormonde'
+siteID = 'WestermostRough'
 
 f = netCDF4.Dataset('../' + siteID + '/inputs/' + siteID + '_Wakes_ref_corrected.nc', 'r')
 fwt = netCDF4.Dataset('../' + siteID + '/inputs/' + siteID + '_Wakes_WindTurbines_corrected.nc', 'r')
