@@ -57,7 +57,7 @@ def plot_wf_layout(x, y, data, labels = [], vmin = np.nan, vmax = np.nan, cmap =
     if ax is None:
         fig, ax = plt.subplots(figsize=figsize)
     if len(data) == 0:
-        sc = ax.scatter(x,y,marker='o',c=data,edgecolors ='k')
+        sc = ax.scatter(x,y,marker='o',c='b',edgecolors ='k')
     else:
         cmap=plt.cm.get_cmap(cmap,9)
         sc = ax.scatter(x,y,marker='o',c=data,cmap=cmap,edgecolors ='k', vmin = vmin, vmax=vmax)
@@ -81,7 +81,7 @@ def centroid(arr):
 def flags_to_ts(scada_flags, min_data_availability):
     filter_condition = (100 - min_data_availability)/100 * scada_flags.shape[1]
     flags_filter = (scada_flags.sum(axis=1) < filter_condition) 
-    return flags_filter[flags_filter].keys()
+    return netCDF4.num2date(flags_filter[flags_filter].keys(),'seconds since 1970-01-01 00:00:00.00 UTC, calendar=gregorian')
 
 def longformat(data,sims,tags,id_vars,value_vars,metric_label):
     plotresults = sims.index[sims['Plot'] == 1].tolist()
@@ -95,10 +95,11 @@ def longformat(data,sims,tags,id_vars,value_vars,metric_label):
     data.rename(columns={'value':metric_label}, inplace=True)  
     return data
 
-def plot_eta_WD_zL(sim_eta, bias, bench_eta, sims, N_WDzL, validation):   
+def plot_eta_WD_zL(sim_eta, bias, bench_eta, sims, N_WDzL, validation, plot_type = 'highlight'):   
     with warnings.catch_warnings():
         warnings.simplefilter("ignore", category=RuntimeWarning)
         plotresults = sims.index[sims['Plot'] == 1].tolist() 
+        highlight = sims.index[sims['Highlight'] == 1].tolist()
         tags = 'Label' 
 
         eta_zL = sim_eta.mean(axis = 1, skipna = True) # array efficiency vs wind direction 
@@ -119,16 +120,26 @@ def plot_eta_WD_zL(sim_eta, bias, bench_eta, sims, N_WDzL, validation):
         eta_WD = longformat(eta_WD,sims,tags,['sim','Input','Model'],WDbins_label,"ArrayEff[%]")
         bias_WD = longformat(bias_WD,sims,tags,['sim','Input','Model'],WDbins_label,"BIAS[%]")
 
+        linestyles = ['-', '--', ':', '-.','o', '^', 'v', '<', '>', 's',
+              '+', 'x', 'd', '1', '2', '3', '4', 'h', 'p', '|', '_', 'D', 'H']
+        
         f1 = plt.figure(figsize = (14,8), constrained_layout = True)   
         spec = gridspec.GridSpec(ncols=2, nrows=2, figure=f1, width_ratios=[2, 0.6], height_ratios=[2, 1])    
-
+        
         f1_ax1 = f1.add_subplot(spec[0, 0])
+        if (highlight) and ('highlight' in plot_type):
+            eta_highlight_WD = sim_eta[highlight].mean(axis = 2, skipna = True).to_pandas()
+            eta_highlight_WD[tags] = sims.iloc[highlight][tags].values
+            eta_highlight_WD = eta_highlight_WD.set_index(tags)
+            eta_highlight_WD.T.plot(grid=1, linewidth = 2, colormap = 'Dark2', 
+                                    style = linestyles, legend=False, ax = f1_ax1)
         if validation:
             eta_obs_WD = bench_eta.mean(axis = 1, skipna = True).to_pandas()
             eta_obs_WD.plot(grid=1, marker='s', markerfacecolor='grey', linewidth = 3, markeredgecolor= 'k', 
-                            markersize = 8, color = 'k', linestyle='--', label = 'Observations', ax = f1_ax1)
-        f1_ax1 = sns.lineplot(x='wd', y='ArrayEff[%]', hue='Input', style = 'Model', data=eta_WD, 
-                              sort=False, legend=False, ax = f1_ax1)
+                            markersize = 8, color = 'k', linestyle='--', label = 'scada', ax = f1_ax1)
+        if ('cat' in plot_type):
+            f1_ax1 = sns.lineplot(x='wd', y='ArrayEff[%]', hue='Input', data=eta_WD, 
+                              sort=False, legend=False, ax = f1_ax1) # , style = 'Model' (only 6 style categories allowed)
         f1_ax1.set_xticklabels(WDbins_label)
         f1_ax1.set_ylabel('Array Efficiency [%]')
         f1_ax1.grid(True)
@@ -148,12 +159,19 @@ def plot_eta_WD_zL(sim_eta, bias, bench_eta, sims, N_WDzL, validation):
         f1_ax2.grid(True)
 
         f1_ax3 = f1.add_subplot(spec[0, 1], sharey=f1_ax1)
+        if (highlight) and ('highlight' in plot_type):
+            eta_highlight_zL = sim_eta[highlight].mean(axis = 1, skipna = True).to_pandas()
+            eta_highlight_zL[tags] = sims.iloc[highlight][tags].values
+            eta_highlight_zL = eta_highlight_zL.set_index(tags)
+            eta_highlight_zL.T.plot(grid=1, linewidth = 2, colormap = 'Dark2', 
+                                    style = linestyles, legend=False, ax = f1_ax3)
         if validation:
             eta_obs_zL = bench_eta.mean(axis = 0, skipna = True).to_pandas()
             eta_obs_zL.plot(grid=1, marker='s', markerfacecolor='grey', linewidth = 2, markeredgecolor= 'k', 
-                            markersize = 8, color = 'k', linestyle='--', label = 'Observations', ax = f1_ax3)
-        f1_ax3 = sns.lineplot(x='zL', y='ArrayEff[%]', hue='Input', style = 'Model', data=eta_zL, 
-                              sort=False, ax = f1_ax3)
+                            markersize = 8, color = 'k', linestyle='--', label = 'scada', ax = f1_ax3)
+        if ('cat' in plot_type):
+            f1_ax3 = sns.lineplot(x='zL', y='ArrayEff[%]', hue='Input', data=eta_zL, 
+                              sort=False, ax = f1_ax3) # , style = 'Model' (only 6 style categories allowed)
         f1_ax3.grid(True)
         f1_ax3.legend(loc = 'upper left', bbox_to_anchor=(1, 1))
         f1_ax3b=f1_ax3.twinx()
@@ -175,44 +193,41 @@ def plot_eta_WD_zL(sim_eta, bias, bench_eta, sims, N_WDzL, validation):
 
     return f1_ax1, f1_ax2, f1_ax3, f1_ax4
 
-def plot_transect(data,val_data,meso_data,obsPfree_data,wt_list,turbines,Drot,sims,plotresults,WDbin,zLbin,highlight,wtnorm,validation, ylim1 = [0.6,1.4], ylim2 = [0.9,1.1], figsize = (16,8)):
+def plot_transect(data,val_data,P_gross,WDbin,zLbin,wt_list,turbines,sims,plotresults,highlight,validation, ylim1 = [0.6,1.4], ylim2 = [0.9,1.1], figsize = (16,8), plot_type = 'highlight'):
     with warnings.catch_warnings():
         warnings.simplefilter("ignore", category=RuntimeWarning)
         # Normalize based on wtnorm position
-        if wtnorm == 'ref':
-            datanorm = data.loc[:,wt_list]/data.mean(axis=1)
-            valdatanorm = val_data.loc[wt_list]/val_data.mean()
-            #datanorm = data[wt_list].div(data.mean(axis = 1), axis=0)
-            #valdatanorm = val_data[wt_list].div(val_data.mean())
-        else:
-            datanorm = data.loc[:,wt_list]/data.loc[:,wtnorm]
-            valdatanorm = val_data.loc[wt_list]/val_data.loc[wtnorm]
-            #datanorm = data[wt_list].div(data[wtnorm], axis=0)
-            #valdatanorm = val_data[wt_list].div(val_data[wtnorm].mean())
+#        if wtnorm == 'ref':
+#            datanorm = data.loc[:,wt_list]/data.mean(axis=1)
+#            valdatanorm = val_data.loc[wt_list]/val_data.mean()
+#        else:
+#            datanorm = data.loc[:,wt_list]/data.loc[:,wtnorm]
+#            valdatanorm = val_data.loc[wt_list]/val_data.loc[wtnorm]
+
+        datanorm = data.loc[:,wt_list,WDbin,zLbin]
+        valdatanorm = val_data.loc[wt_list,WDbin,zLbin]
 
         tags = 'Label'
-        datanorm_sns = longformat(datanorm,sims,tags,['sim','Input','Model'],wt_list,"P")
+        datanorm_sns = longformat(datanorm,sims,tags,['sim','Input','Model'],wt_list,"eta")
 
         n_wt = len(wt_list)
+        
+        x_ref, y_ref = centroid(turbines[['X coordinate','Y coordinate']].values) # coordinates of wind farm centroid
+        x_wt = turbines['X coordinate']-x_ref
+        y_wt = turbines['Y coordinate']-y_ref
 
-        #compute distances to first turbine
-        a = turbines.loc[turbines['VDC ID'] == wt_list[0],['X coordinate','Y coordinate']].values.flatten()            
-        dists = []
-        coords = np.zeros((n_wt,2))
-        for wt in range(n_wt):
-            b = turbines.loc[turbines['VDC ID'] == wt_list[wt],['X coordinate','Y coordinate']].values.flatten()
-            dists.append(((a[0]-b[0])**2+(a[1]-b[1])**2)**0.5 / Drot)
-            coords[wt,:]=b
+        linestyles = ['-', '--', ':', '-.','o', '^', 'v', '<', '>', 's',
+              '+', 'x', 'd', '1', '2', '3', '4', 'h', 'p', '|', '_', 'D', 'H']
 
         f1 = plt.figure(figsize = figsize)   # constrained_layout=True
         spec = gridspec.GridSpec(ncols=2, nrows=2, figure=f1, width_ratios=[1, 1.5], height_ratios=[2, 1])    
 
         iwt = [x in wt_list for x in turbines['VDC ID']]
         f1_ax1 = f1.add_subplot(spec[:, 0])
-        f1_ax1.scatter(turbines['X coordinate'],turbines['Y coordinate'],c='silver', marker = 'o', s=20)
-        f1_ax1.scatter(turbines['X coordinate'][iwt],turbines['Y coordinate'][iwt],c='black', marker = 'o',s=20)
-        f1_ax1.text(coords[0][0],coords[0][1],wt_list[0],{'ha': 'right'}, fontsize=14)
-        f1_ax1.text(coords[-1][0],coords[-1][1],wt_list[-1],{'ha': 'right'}, fontsize=14)
+        f1_ax1.scatter(x_wt,y_wt,c='silver', marker = 'o', s=20)
+        f1_ax1.scatter(x_wt[iwt],y_wt[iwt],c='black', marker = 'o',s=20)
+        f1_ax1.text(x_wt.loc[iwt].iloc[0],y_wt.loc[iwt].iloc[0],turbines['VDC ID'].iloc[iwt].iloc[0],{'ha': 'right'}, fontsize=14)
+        f1_ax1.text(x_wt.loc[iwt].iloc[-1],y_wt.loc[iwt].iloc[-1],turbines['VDC ID'].iloc[iwt].iloc[-1],{'ha': 'right'}, fontsize=14)
         f1_ax1.axis('scaled')
         f1_ax1.spines['top'].set_visible(False)
         f1_ax1.spines['bottom'].set_visible(False)
@@ -222,44 +237,38 @@ def plot_transect(data,val_data,meso_data,obsPfree_data,wt_list,turbines,Drot,si
         f1_ax1.get_yaxis().set_ticks([])
 
         f1_ax2 = f1.add_subplot(spec[0, 1])
+        if (highlight) and ('highlight' in plot_type):
+            datanorm_pd = datanorm[highlight].to_pandas()
+            datanorm_pd[tags] = sims.iloc[highlight][tags].values
+            datanorm_pd = datanorm_pd.set_index(tags)
+            datanorm_pd.T.plot(grid=1, linewidth = 2, colormap = 'Dark2', 
+                                    style = linestyles, legend=False, ax = f1_ax2)
         if validation:
             valdatanorm.to_pandas().plot(marker='s', markerfacecolor='grey', linewidth = 2, markeredgecolor= 'k', 
-                             markersize = 8, color = 'k', linestyle='--', ax = f1_ax2, label = 'Observations')
-        f1_ax2 = sns.lineplot(x='wt', y='P', hue='Input', style = 'Model', data=datanorm_sns, sort=False) 
+                             markersize = 8, color = 'k', linestyle='--', ax = f1_ax2, label = 'scada')
+        if ('cat' in plot_type):
+            f1_ax2 = sns.lineplot(x='wt', y='eta', hue='Input', data=datanorm_sns, sort=False) #, style = 'Model'
         f1_ax2.set_xticklabels(wt_list)
         f1_ax2.legend(loc = 'upper left', bbox_to_anchor=(1, 1)) 
         f1_ax2.set_ylim(ylim1)
         f1_ax2.set_xlabel(None)
-        if wtnorm == 'ref':
-            f1_ax2.set_ylabel('Net Power Ratio = $P/P_{ref}$')  
-        else:
-            f1_ax2.set_ylabel('Net Power Ratio = P/P$_{}$'.format(wtnorm))  
+        f1_ax2.set_ylabel('Array Efficiency')  
         f1_ax2.set_title('Transect '+wt_list[0]+'-'+wt_list[-1]+' ('+WDbin+', '+zLbin+')')
         f1_ax2.grid(True)
         f1_ax2.margins(0.05)
 
-        if wtnorm == 'ref':
-            meso_P_ratio = meso_data.loc[wt_list]/meso_data.mean()
-        else:
-            meso_P_ratio = meso_data.loc[wt_list]/meso_data.loc[wtnorm]
-
-        if validation: 
-            if wtnorm == 'ref':
-                obs_Pfree_ratio = obsPfree_data.loc[wt_list]/obsPfree_data.mean()
-            else:
-                obs_Pfree_ratio = obsPfree_data.loc[wt_list]/obsPfree_data.loc[wtnorm]
-
         f1_ax3 = f1.add_subplot(spec[1, 1])
-        f1_ax3.plot(wt_list,meso_P_ratio,'-b',linewidth = 2,label = 'Meso')
-        if validation:
-            f1_ax3.plot(wt_list,obs_Pfree_ratio,marker='s', markerfacecolor='grey', linewidth = 2,
-                        markeredgecolor= 'k',  markersize = 8, color = 'k', linestyle='--', label = 'Obs')
-        if wtnorm == 'ref':
-            f1_ax3.set_ylabel('Gross Power Ratio = $P(S)/P(S_{ref})$') 
-        else:
-            f1_ax3.set_ylabel('Gross Power Ratio = P(S)/P(S$_{}$)'.format(wtnorm))    
+        linestyle = {"ctrl": '-b',"ctrl-corr": '-.r',"wakes": '--g', "wakes-corr": '-.r', "scada": 's-k'}
+        for p in P_gross:
+            P_gross_ratio = P_gross[p].loc[wt_list,WDbin,zLbin]/P_gross[p].loc[:,WDbin,zLbin].mean()
+            if validation and p == "scada":
+                f1_ax3.plot(wt_list,P_gross_ratio,marker='s', markerfacecolor='grey', linewidth = 2,
+                            markeredgecolor= 'k',  markersize = 8, color = 'k', linestyle='--', label = 'scada')
+            else:
+                f1_ax3.plot(wt_list,P_gross_ratio,linestyle[p],linewidth = 2,label = p)
+        f1_ax3.set_ylabel('Gross Power Ratio') 
 
-        f1_ax3.legend() #loc = 'upper left', bbox_to_anchor=(1, 1)
+        f1_ax3.legend(loc = 'upper left', bbox_to_anchor=(1, 1))
         f1_ax3.grid(True)
         f1_ax3.set_ylim(ylim2)
 
@@ -404,6 +413,7 @@ def read_sims(sims,binmap,bins_label, printfiles = False):
                     col_name = 'P' + str(i_wd+1) + zLbins_label[i_zL]
                     for i_wt in range(Nwt):
                         bin_averages[i_wt,i_wd,i_zL] = ba[col_name][i_wt]
+            Pi = bin_averages
         P[i_sim] = Pi
         P_std[i_sim] = Pi_std
     # Compute ensemble
@@ -491,8 +501,6 @@ def read_Am(file_obs,N_WDzL,binmap,bins_label,P_meso,file_Am,savefile = False, p
     return Am, Pfree_obs, Pfree_obs_std
 
 def Afreestream(P_gross,P,sims,bins,bins_label,turbines):
-    P_mesowk,P_mesoctrl,P_mesocorr,Pfree_obs = P_gross
-
     WDbins, zLbins = bins
     Nwt, Nwd, NzL = [len(dim) for dim in bins_label] 
     wt_label, WDbins_label, zLbins_label = bins_label
@@ -512,13 +520,15 @@ def Afreestream(P_gross,P,sims,bins,bins_label,turbines):
                 f1 = interpolate.NearestNDInterpolator(points[freestream], P[i_sim][freestream,i_wd,i_zL].values)
                 Pfree[i_sim][:,i_wd,i_zL] = f1(points)
         if ("wakes-corr" in sims['Input'][i_sim]):
-            Afree[i_sim] = Pfree[i_sim]/P_mesocorr
-        elif ("ctrl" in sims['Input'][i_sim]):
-            Afree[i_sim] = Pfree[i_sim]/P_mesoctrl
-        elif ("scada" in sims['Input'][i_sim]):
-            Afree[i_sim] = Pfree[i_sim]/Pfree_obs
-        else:
-            Afree[i_sim] = Pfree[i_sim]/P_mesowk     
+            Afree[i_sim] = Pfree[i_sim]/P_gross["wakes-corr"]
+        if ("ctrl-corr" in sims['Input'][i_sim]):
+            Afree[i_sim] = Pfree[i_sim]/P_gross["ctrl-corr"]
+        if ("wakes" in sims['Input'][i_sim]):
+            Afree[i_sim] = Pfree[i_sim]/P_gross["wakes"]
+        if ("ctrl" in sims['Input'][i_sim]):
+            Afree[i_sim] = Pfree[i_sim]/P_gross["ctrl"]
+        if ("scada" in sims['Input'][i_sim]):
+            Afree[i_sim] = Pfree[i_sim]/P_gross["scada"]
         pbar.update(1)
     pbar.close()
         
@@ -590,7 +600,7 @@ def compute_overall_metrics(eta_farm,bias_farm,mae_farm,sims,N_WDzL,Nmin,binmap,
     if plot:
         with sns.axes_style("darkgrid"):
             fig, ax = plt.subplots(nrows=1, ncols=3, sharey='all',figsize=figsize)
-            data = metrics.iloc[plotresults]
+            data = metrics.iloc[plotresults].dropna()
             ax[0] = sns.barplot(x="ArrayEff[%]", y="sim", hue="Input", data=data,
                         palette="muted", dodge=False, ax = ax[0])
             ax[0].legend([])
@@ -617,7 +627,7 @@ def compute_overall_metrics(eta_farm,bias_farm,mae_farm,sims,N_WDzL,Nmin,binmap,
     return metrics
 
 
-def compute_stability_metrics(data,sims,metric_label,N_WDzL,Nmin,binmap,tags, figsize = (6,6), plot = True):
+def stability_metrics(data,sims,metric_label,N_WDzL,Nmin,binmap,tags, figsize = (6,6), plot = True):
     n_sim = len(sims)
     plotresults = sims.index[sims['Plot'] == 1].tolist()
     zLbins_label = data.coords['zL'].values.tolist()
@@ -643,7 +653,7 @@ def plot_heatmaps(data,sims, N_WDzL, Nmin, ax_size = (1.7,4), cols = 4):
     plotresults = sims.index[sims['Plot'] == 1].tolist()
     data = data[plotresults]
     mask = np.zeros_like(N_WDzL)
-    mask[N_WDzL > Nmin] = True
+    mask[N_WDzL < Nmin] = True
 
     sim_id = data.coords['sim'].values.flatten()
 
