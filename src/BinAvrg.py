@@ -568,7 +568,7 @@ def annotate_bars(ax,data,col):
         ax.text(row[col],cnt+0.25, round(row[col],2), color='k', ha=ha)
         cnt = cnt + 1
 
-def compute_overall_metrics(eta_farm,bias_farm,mae_farm,sims,N_WDzL,Nmin,binmap,tags,figsize = (10,6), plot = True):   
+def overall_metrics(eta_farm,bias_farm,mae_farm,sims,N_WDzL,Nmin,binmap,tags,figsize = (10,6), plot = True):   
     n_sim = len(sims)
     plotresults = sims.index[sims['Plot'] == 1].tolist()
     len_array = np.vectorize(len)
