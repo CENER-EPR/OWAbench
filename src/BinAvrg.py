@@ -21,7 +21,12 @@ import alphashape
 from shapely.geometry import Point, LineString
 from tqdm import tqdm
 import math
-                           
+from scipy.linalg import lstsq
+
+def time_stamp(year,month,day,hour,minute,second):
+    """ Abstraction method for creating compatible time stamps"""
+    return datetime.datetime(year,month,day,hour,minute,second)   
+
 def define_freestream(points,WD):
     """
     Define which turbines in the layout are in freestream conditions
@@ -52,6 +57,49 @@ def define_freestream(points,WD):
                 freestream[wt] = True
                 
     return freestream
+
+def spacing(x_wt, y_wt, D, WD):
+    n_wt = len(x_wt)
+    polarangle = (-WD + 90.)*np.pi/180. # from wind direction to polar angle
+    raylength = 30000.
+
+    s_x = np.zeros(len(WD))
+    s_y = np.zeros(len(WD))
+    for wd in range(len(WD)):
+        d = np.zeros((n_wt,n_wt))
+        s_x_wd = np.zeros((n_wt,n_wt))
+        s_y_wd = np.zeros((n_wt,n_wt))
+        s_x_wd_i = np.zeros((n_wt))
+        s_y_wd_i = np.zeros((n_wt))
+        for i in range(n_wt):
+            for j in range(n_wt):
+                if i != j:
+                    wt_i = Point(x_wt[i], y_wt[i])
+                    wt_j = Point(x_wt[j], y_wt[j])
+                    point_upstream = Point(x_wt[i] + raylength*np.cos(polarangle[wd]), 
+                                           y_wt[i] + raylength*np.sin(polarangle[wd]))
+                    point_downstream = Point(x_wt[i] + raylength*np.cos(polarangle[wd] + np.pi), 
+                                             y_wt[i] + raylength*np.sin(polarangle[wd] + np.pi))
+                    line = LineString([point_upstream, point_downstream])
+                    d[i,j] = wt_i.distance(wt_j)          # distance between turbines i and j
+                    s_y_wd[i,j] = line.distance(wt_j)        # cross-wind distance 
+                    s_x_wd[i,j] = (d[i,j]**2 - s_y_wd[i,j]**2)**0.5  # streamwise distance
+
+            s_x_inline = s_x_wd[i,s_y_wd[i,:] < D] # turbines in the same column
+            if len(s_x_inline) > 1:
+                s_x_wd_i[i] = s_x_inline[s_x_inline > 0].min()
+            else:
+                s_x_wd_i[i] = np.nan
+
+            s_y_row = s_y_wd[i,s_x_wd[i,:] < D]  # turbines in the same row
+            if len(s_y_row) > 1:
+                s_y_wd_i[i] = s_y_row[s_y_row > 0].min()
+            else:
+                s_y_wd_i[i] = np.nan
+
+        s_x[wd] = np.median(s_x_wd_i[~np.isnan(s_x_wd_i)])
+        s_y[wd] = np.median(s_y_wd_i[~np.isnan(s_y_wd_i)])
+    return s_x/D, s_y/D
 
 def plot_wf_layout(x, y, data, labels = [], vmin = np.nan, vmax = np.nan, cmap = 'jet', title = [], figsize=(12,6),ax = None):  
     if ax is None:
@@ -89,8 +137,8 @@ def longformat(data,sims,tags,id_vars,value_vars,metric_label):
     data['sim'] = sims.loc[plotresults][tags].values
     data['Input'] = sims.loc[plotresults]['Input'].values
     data['Model'] = sims.loc[plotresults]['Model Type'].values
-    for i_sim in range(len(plotresults)):
-        data.loc[sims['ID'][plotresults[i_sim]],'K'] = sims.loc[plotresults[i_sim]]['Remarks'].partition('K = ')[2]    
+    #for i_sim in range(len(plotresults)):
+    #    data.loc[sims['ID'][plotresults[i_sim]],'K'] = sims.loc[plotresults[i_sim]]['Remarks'].partition('K = ')[2]    
     data = pd.melt(data, id_vars=id_vars, value_vars=value_vars)
     data.rename(columns={'value':metric_label}, inplace=True)  
     return data
@@ -235,7 +283,7 @@ def plot_transect(data,val_data,P_gross,WDbin,zLbin,wt_list,turbines,sims,plotre
         f1_ax1.spines['right'].set_visible(False)
         f1_ax1.get_xaxis().set_ticks([])
         f1_ax1.get_yaxis().set_ticks([])
-
+       
         f1_ax2 = f1.add_subplot(spec[0, 1])
         if (highlight) and ('highlight' in plot_type):
             datanorm_pd = datanorm[highlight].to_pandas()
@@ -244,11 +292,15 @@ def plot_transect(data,val_data,P_gross,WDbin,zLbin,wt_list,turbines,sims,plotre
             datanorm_pd.T.plot(grid=1, linewidth = 2, colormap = 'Dark2', 
                                     style = linestyles, legend=False, ax = f1_ax2)
         if validation:
+            f1_ax22 = f1_ax2.twinx()
             valdatanorm.to_pandas().plot(marker='s', markerfacecolor='grey', linewidth = 2, markeredgecolor= 'k', 
-                             markersize = 8, color = 'k', linestyle='--', ax = f1_ax2, label = 'scada')
+                             markersize = 8, color = 'k', linestyle='--', ax = f1_ax22, label = 'scada')
+            f1_ax22.set_ylim(ylim1)
+            f1_ax22.set_yticklabels('')
+            f1_ax22.set_yticks([]) 
         if ('cat' in plot_type):
             f1_ax2 = sns.lineplot(x='wt', y='eta', hue='Input', data=datanorm_sns, sort=False) #, style = 'Model'
-        f1_ax2.set_xticklabels(wt_list)
+        #f1_ax2.set_xticklabels(wt_list)
         f1_ax2.legend(loc = 'upper left', bbox_to_anchor=(1, 1)) 
         f1_ax2.set_ylim(ylim1)
         f1_ax2.set_xlabel(None)
@@ -256,8 +308,10 @@ def plot_transect(data,val_data,P_gross,WDbin,zLbin,wt_list,turbines,sims,plotre
         f1_ax2.set_title('Transect '+wt_list[0]+'-'+wt_list[-1]+' ('+WDbin+', '+zLbin+')')
         f1_ax2.grid(True)
         f1_ax2.margins(0.05)
+        xlim1 = f1_ax2.get_xlim()
+        f1_ax2.set_xlim([xlim1[0]-0.5,xlim1[1]+0.5])
 
-        f1_ax3 = f1.add_subplot(spec[1, 1])
+        f1_ax3 = f1.add_subplot(spec[1, 1], sharex = f1_ax2)
         linestyle = {"ctrl": '-b',"ctrl-corr": '-.r',"wakes": '--g', "wakes-corr": '-.r', "scada": 's-k'}
         for p in P_gross:
             P_gross_ratio = P_gross[p].loc[wt_list,WDbin,zLbin]/P_gross[p].loc[:,WDbin,zLbin].mean()
@@ -270,12 +324,96 @@ def plot_transect(data,val_data,P_gross,WDbin,zLbin,wt_list,turbines,sims,plotre
 
         f1_ax3.legend(loc = 'upper left', bbox_to_anchor=(1, 1))
         f1_ax3.grid(True)
-        f1_ax3.set_ylim(ylim2)
-
-        xlim = f1_ax3.get_xlim()
-        f1_ax2.set_xlim(xlim)
+        
 
     return f1_ax1,f1_ax2,f1_ax3
+
+def windfarmlength(points, wd):
+    raylength = 20000
+    alpha = 0.0004
+    alpha_shape = alphashape.alphashape(points, alpha)
+    polarangle = (-wd + 90.)*np.pi/180. # from wind direction to polar angle
+    length = []
+    for i in polarangle:
+        point_upstream = Point(raylength*np.cos(i), raylength*np.sin(i))
+        point_downstream = Point(raylength*np.cos(i + np.pi), raylength*np.sin(i + np.pi))
+        line = LineString([point_upstream, point_downstream])
+        x = alpha_shape.boundary.intersection(line)
+        length.append(x[0].distance(x[1]))
+    length = np.asarray(length)
+    return length
+
+def hgradient(x,y,U,V,coord = 'wd'):
+    # S = p[0]*x + p[1]*y + p[2]
+    U = U.dropna()
+    V = V.dropna()
+    S = (U**2 + V**2)**0.5 
+    WD = (270-np.rad2deg(np.arctan2(V,U)))%360
+    n = len(x)
+    b = S.T
+    A = np.array([x,y,np.ones(n)]).T
+    p, res, rnk, s = lstsq(A, b) 
+    
+    # test 
+    #from mpl_toolkits.mplot3d import Axes3D
+    #xx, yy = np.meshgrid(np.linspace(x_wt.min(), x_wt.max(), 101), 
+    #                    np.linspace(y_wt.min(), y_wt.max(), 101))
+    #t = 100 # choose a timestamp index
+    #zz = p[0,t]*xx + p[1,t]*yy + p[2,t]
+    #fig = plt.figure()
+    #ax = fig.gca(projection='3d')
+    #ax.plot_surface(xx, yy, zz, alpha=0.2,label='least squares fit, $S = p0 + p1*x + p2*y$')
+    #ax.scatter(x, y, b[:,t], marker='o', label='data')
+    #ax.set_xlabel('x')
+    #ax.set_ylabel('y')
+    #ax.set_zlabel('S')
+    #plt.grid(alpha=0.25)
+    #plt.show()
+    
+    if coord == 'xy': # natural coordinates
+        Sgrad = pd.DataFrame(index=S.index, columns = {'S_x','S_y','S_h'})
+        Sgrad['S_x'] = p[0,:] # East component
+        Sgrad['S_y'] = p[1,:] # North component
+        Sgrad['S_h'] = (p[0,:]**2 + p[1,:]**2)**0.5 # Magnitude
+    else:
+        theta = np.arctan(V/U).mean(axis = 1)  
+        Sgrad = pd.DataFrame(index=S.index, columns = {'S_u','S_v','S_h'})
+        Sgrad['S_u'] = (p[0,:]*np.cos(theta) + p[1,:]*np.sin(theta)) # streamwise component 
+        Sgrad['S_v'] = -p[0,:]*np.sin(theta) + p[1,:]*np.cos(theta) # cross-wind component 
+        Sgrad['S_h'] = (p[0,:]**2 + p[1,:]**2)**0.5 # Magnitude
+        
+    points = pd.concat([x,y], axis = 1).values
+    length = windfarmlength(points, WD.median(axis = 1))
+        
+    Sgrad = Sgrad.multiply(length/S.mean(axis = 1).values, axis=0) # non-dimensional gradient 
+    return Sgrad
+
+def plot_gradient(S_grad, figsize = (10,6), var = 'h'):
+    with sns.axes_style("darkgrid"): 
+        if var == 'u':
+            value = 'S_u'
+            title = 'Longitudinal Wind Speed Gradient'
+            ylabel = '$S_{u}L_{u}/S$'
+        elif var == 'v':
+            value = 'S_v'
+            title = 'Transversal Wind Speed Gradient'
+            ylabel = '$S_{v}L_{u}/S$'
+        elif var == 'h':
+            value = 'S_grad'
+            title = 'Horizontal Wind Speed Gradient'
+            ylabel = '$|grad(S)|L_{u}/S$'        
+        S_grad_pd = S_grad.to_pandas()
+        zLbins_label = S_grad_pd.columns.values
+        S_grad_pd.reset_index(level=0, inplace=True)
+        S_grad_pd = pd.melt(S_grad_pd, id_vars=['wd'], value_vars=zLbins_label)
+        S_grad_pd.rename(columns={'value':value}, inplace=True)
+        fig, ax = plt.subplots(figsize=figsize)
+        ax = sns.barplot(x='wd', y=value, hue='zL', data=S_grad_pd, palette = 'bwr_r',
+                         edgecolor='grey',saturation=1) 
+        ax.grid(True)
+        ax.set_title(title)
+        ax.legend(loc = 'upper left', bbox_to_anchor=(1, 1));
+        ax.set_ylabel(ylabel)
 
 def read_input(file,datefrom,dateto,flags,variables):
     f = netCDF4.Dataset(file,'r')
@@ -299,7 +437,7 @@ def read_input(file,datefrom,dateto,flags,variables):
             V = pd.DataFrame(f.variables['V'][idates].data, index = times)
             var = (270-np.rad2deg(np.arctan2(V,U)))%360
         elif v == 'zL':
-            var = 10./pd.DataFrame(f.variables['L'][idates].data, index = times)
+            var = 10./pd.DataFrame(f.variables['L'][idates].data, index = times)       
         else:
             var = pd.DataFrame(f.variables[v][idates].data, index = times)
         if len(flags) != 0:
@@ -370,17 +508,26 @@ def xarray_init(dims,labels):
     return xr_init
 
 def bin_avrg(ts,binmap,bins_label):
-    Nwt, Nwd, NzL = [len(dim) for dim in bins_label]
-    wt_label, WDbins_label, zLbins_label = bins_label
-
-    mean = xarray_init(['wt','wd','zL'],bins_label)
-    std = xarray_init(['wt','wd','zL'],bins_label)
-
-    for i_wd in range(Nwd):
-        for i_zL in range(NzL):
-            ts_bin = ts.reindex(binmap[i_wd,i_zL])
-            mean[:,i_wd,i_zL] = ts_bin.mean()
-            std[:,i_wd,i_zL] = ts_bin.std()
+    if len(bins_label) == 2:
+        Nwd, NzL = [len(dim) for dim in bins_label]
+        WDbins_label, zLbins_label = bins_label
+        mean = xarray_init(['wd','zL'],bins_label)
+        std = xarray_init(['wd','zL'],bins_label)        
+        for i_wd in range(Nwd):
+            for i_zL in range(NzL):
+                ts_bin = ts.reindex(binmap[i_wd,i_zL])
+                mean[i_wd,i_zL] = ts_bin.mean()
+                std[i_wd,i_zL] = ts_bin.std()
+    else:
+        Nwt, Nwd, NzL = [len(dim) for dim in bins_label]
+        wt_label, WDbins_label, zLbins_label = bins_label
+        mean = xarray_init(['wt','wd','zL'],bins_label)
+        std = xarray_init(['wt','wd','zL'],bins_label)
+        for i_wd in range(Nwd):
+            for i_zL in range(NzL):
+                ts_bin = ts.reindex(binmap[i_wd,i_zL])
+                mean[:,i_wd,i_zL] = ts_bin.mean()
+                std[:,i_wd,i_zL] = ts_bin.std()
     return mean, std
 
 def read_sims(sims,binmap,bins_label, printfiles = False):
@@ -558,14 +705,14 @@ def plot_Afree(Afree,sim,N_WDzL,zLbins_label):
     
     return ax
    
-def annotate_bars(ax,data,col):
+def annotate_bars(ax,data,col,color = 'k'):
     cnt = 0
     for index, row in data.iterrows():
         if row[col]<0: 
             ha = 'left'
         else:
             ha = 'right'
-        ax.text(row[col],cnt+0.25, round(row[col],2), color='k', ha=ha)
+        ax.text(row[col],cnt+0.25, round(row[col],2), color=color, ha=ha)
         cnt = cnt + 1
 
 def overall_metrics(eta_farm,bias_farm,mae_farm,sims,N_WDzL,Nmin,binmap,tags,figsize = (10,6), plot = True):   
@@ -603,24 +750,24 @@ def overall_metrics(eta_farm,bias_farm,mae_farm,sims,N_WDzL,Nmin,binmap,tags,fig
             data = metrics.iloc[plotresults].dropna()
             ax[0] = sns.barplot(x="ArrayEff[%]", y="sim", hue="Input", data=data,
                         palette="muted", dodge=False, ax = ax[0])
-            ax[0].legend([])
+            ax[0].get_legend().remove()
             ax[0].set_ylabel('')
             ax[0].grid(True)
-            annotate_bars(ax[0],data,"ArrayEff[%]")
+            annotate_bars(ax[0],data,"ArrayEff[%]",color = 'k')
 
             ax[1] = sns.barplot(x="BIAS[%]", y="sim", hue="Input", data=data,
                         palette="muted", dodge=False, ax = ax[1])
-            ax[1].legend([])
+            ax[1].get_legend().remove()
             ax[1].grid(True)
             ax[1].set_ylabel('')    
-            annotate_bars(ax[1],data,"BIAS[%]")
+            annotate_bars(ax[1],data,"BIAS[%]", color = 'k')
 
             ax[2] = sns.barplot(x="MAE[%]", y="sim", hue="Input", data=data,
                         palette="muted", dodge=False, ax = ax[2])
             ax[2].legend(loc='upper left', bbox_to_anchor=(1, 1))
             ax[2].grid(True)
             ax[2].set_ylabel('')
-            annotate_bars(ax[2],data,"MAE[%]")
+            annotate_bars(ax[2],data,"MAE[%]", color = 'k')
                 
                 
         sns.axes_style("white")
@@ -643,7 +790,7 @@ def stability_metrics(data,sims,metric_label,N_WDzL,Nmin,binmap,tags, figsize = 
         with sns.axes_style("darkgrid"):
             data_zL = longformat(data_zL,sims,tags,['sim','Input'],zLbins_label,metric_label)
             ax = sns.catplot(x=metric_label, y="sim", hue="Input", col="zL",
-                        kind="bar", data=data_zL, palette="muted", dodge=False);
+                        kind="bar", data=data_zL, palette="muted", dodge=False, height=figsize[0], aspect=figsize[1]);
             ax.set_axis_labels(metric_label, "")
             #annotate_bars(ax,data_zL,metric)            
     return data_zL_wide

@@ -1,0 +1,10 @@
+xarray==0.12.1
+windrose==1.6.5
+tqdm==4.39.0
+seaborn==0.9.0
+scipy==1.3.0
+pandas==0.24.2
+numpy==1.17.4
+netCDF4==1.5.0
+matplotlib==3.0.3
+alphashape==1.0.1
