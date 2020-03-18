@@ -32,7 +32,7 @@ Citation
 ========
 You can cite the github repo in the following way:
 
-OWAbench. Version 2.0 (2019) https://github.com/CENER-EPR/OWAbench
+OWAbench. Version 2.0 (2020) https://github.com/CENER-EPR/OWAbench
 
 Installation
 ============
