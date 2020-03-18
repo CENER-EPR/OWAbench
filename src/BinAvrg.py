@@ -72,6 +72,69 @@ def Afreestream(P_gross,P,sims,bins,bins_label,turbines):
         
     return Pfree, Afree
 
+def Ameso(file_obs,N_WDzL,binmap,bins_label,P_meso,file_Am,savefile = False, plot = True, figsize = (10,6)):
+    """
+    Compute/load and plot bin-averaged mesoscale correction factors 
+    Inputs: 
+        - file_obs: path to observed freestream power csv file
+        - N_WDzL: dataframe wind bin sample count per wd and zL 
+        - binmap: list of timestamp indices to samples in each bin (wd,zL)
+        - P_meso: xarray of bin-averaged background gross power from mesoscale (wt, wd, zL)
+        - file_Am: name of Am file to load/save
+        - savefile: flag to save Am file 
+        - plot: flag to return Am plot
+    Outputs:
+        - Am: xarray of bin-averaged mesoscale correction factors for each turbine (wt, wd, zL) 
+        - Pfree_obs: xarray of bin-averaged observed "freestream" gross power from scada (wt, wd, zL)
+        - Pfree_obs_std: xarray of bin standard deviation observed "freestream" gross power from scada (wt, wd, zL)
+    """
+    
+    try:
+        Nwt, Nwd, NzL = [len(dim) for dim in bins_label] 
+        wt_label, WDbins_label, zLbins_label = bins_label
+
+        Pfree_obs = xarray_init(['wt','wd','zL'],bins_label)
+        Pfree_obs_std = xarray_init(['wt','wd','zL'],bins_label)
+
+        ts = pd.read_csv(file_obs, index_col = 'time')
+        times = netCDF4.num2date(ts.index,'seconds since 1970-01-01 00:00:00.00 UTC, calendar=gregorian')
+        ts['time'] = times
+        ts.set_index('time',inplace=True)
+        ts = ts[wt_label] 
+        Pfree_obs, Pfree_obs_std = bin_avrg(ts,binmap,bins_label)
+        Am = Pfree_obs/P_meso   
+        if savefile == True:
+            Am.to_netcdf('./inputs/' + file_Am)
+    except IOError:
+        print ("No freestream data is available. Am loaded from ./inputs/%s " % (file_Am))
+        Am = xr.open_dataset('./inputs/' + file_Am)
+        Pfree_obs, Pfree_obs_std = None
+    
+    # Compute the total bias correction as a weighted averaged sum of all bins  
+    Am_global = Am.mean(axis=0)
+    Am_global_df = Am_global.to_dataframe(name = 'Am').unstack()
+    Am_global_df.columns = Am_global_df.columns.get_level_values(1)
+    Am_global_df = Am_global_df[['u','n','s']]
+    Am_total = (Am_global_df*N_WDzL/N_WDzL.sum().sum()).sum().sum()
+    print ("Total mesoscale bias correction = %.3f" % (Am_total))
+    
+    if plot:
+        with sns.axes_style("darkgrid"):        
+            Am_pd = pd.concat([Am[i,:,:].to_pandas() for i in range(Am.shape[2])])
+            Am_pd.reset_index(level=0, inplace=True)
+            Am_pd = pd.melt(Am_pd, id_vars=['wd'], value_vars=zLbins_label)
+            Am_pd.rename(columns={'value':'Am'}, inplace=True)
+            fig, ax = plt.subplots(figsize=figsize)
+            ax = sns.barplot(x='wd', y='Am', hue='zL', data=Am_pd, palette = 'bwr_r',
+                             edgecolor='grey',saturation=1) 
+            ax.grid(True)
+            ax.set_ylabel('$A_M$')
+            ax.set_title('Wind farm mesoscale bias correction factor $A_M$')
+            ax.legend(loc = 'upper left', bbox_to_anchor=(1, 1));
+            sns.axes_style("white")
+            
+    return Am, Pfree_obs, Pfree_obs_std
+
 def annotate_bars(ax,data,col,color = 'k'):
     """
     Add annotations in horizontal bar plots
@@ -220,7 +283,7 @@ def flags_to_ts(scada_flags, min_data_availability):
     
     return goodtimestamps
 
-def hgradient(x,y,U,V,coord = 'uv'):
+def S_grad(x,y,U,V,coord = 'uv'):
     """
     Compute non-dimensional horizontal gradients accross the wind farm by fitting the horizontal wind speed to a plane
     Inputs:
@@ -405,7 +468,8 @@ def plot_Afree(Afree,sim,N_WDzL,zLbins_label):
                          edgecolor='grey',saturation=1) #sns.color_palette("coolwarm", 3)
         ax.grid(True)
         ax.set_title('Wind farm freestream bias correction factor $A_{free}$: ' + sim)
-        ax.legend(loc = 'upper left', bbox_to_anchor=(1, 1));
+        ax.legend(loc = 'upper left', bbox_to_anchor=(1, 1))
+        ax.set_ylim((0,1.2))
         sns.axes_style("white")
     
     # Compute the total freestream ratio as a weighted averaged sum of all bins 
@@ -537,16 +601,21 @@ def plot_eta_WD_zL(sim_eta, bias, bench_eta, sims, N_WDzL, validation, plot_type
 
     return f1_ax1, f1_ax2, f1_ax3, f1_ax4
 
-def plot_gradient(S_grad, figsize = (10,6), var = 'h'):
+def plot_gradient(S_grad, var = 'h', figsize = (10,6), ylim = [0.6,1.4]):
     """ 
     Plot gradients per wind direction and stability
     Inputs: 
         - S_grad: dataframe with horizontal gradient
         - figsize:  figure size
         - var: variable to plot {'u','v','h'}
+        - ylim: y-axis limits
     """
     with sns.axes_style("darkgrid"): 
-        if var == 'u':
+        if var == 'P':
+            value = 'Pdelta'
+            title = 'Gross Power Variability'
+            ylabel = '$\Delta P_{gross}$ [%]'
+        elif var == 'u':
             value = 'S_u'
             title = 'Longitudinal Wind Speed Gradient'
             ylabel = '$S_{u}L_{u}/S$'
@@ -570,6 +639,7 @@ def plot_gradient(S_grad, figsize = (10,6), var = 'h'):
         ax.set_title(title)
         ax.legend(loc = 'upper left', bbox_to_anchor=(1, 1));
         ax.set_ylabel(ylabel)
+        ax.set_ylim(ylim)
 
 def plot_heatmaps(data,sims, N_WDzL, Nmin, ax_size = (1.7,4), cols = 4):
     """
@@ -784,6 +854,7 @@ def plot_transect(data,bench_data,P_gross,WDbin,zLbin,wt_list,turbines,sims,plot
                 f1_ax3.plot(wt_list,P_gross_ratio,linestyle[p],linewidth = 2,label = p)
         f1_ax3.set_ylabel('Gross Power Ratio') 
 
+        f1_ax3.set_ylim(ylim2)
         f1_ax3.legend(loc = 'upper left', bbox_to_anchor=(1, 1))
         f1_ax3.grid(True)
         
@@ -808,68 +879,6 @@ def plot_wf_layout(x, y, data, labels = [], vmin = np.nan, vmax = np.nan, cmap =
     ax.set_title(title)
     ax.grid()
     return sc
-
-def read_Am(file_obs,N_WDzL,binmap,bins_label,P_meso,file_Am,savefile = False, plot = True):
-    """
-    Compute/load and plot bin-averaged mesoscale correction factors 
-    Inputs: 
-        - file_obs: path to observed freestream power csv file
-        - N_WDzL: dataframe wind bin sample count per wd and zL 
-        - binmap: list of timestamp indices to samples in each bin (wd,zL)
-        - P_meso: xarray of bin-averaged background gross power from mesoscale (wt, wd, zL)
-        - file_Am: name of Am file to load/save
-        - savefile: flag to save Am file 
-        - plot: flag to return Am plot
-    Outputs:
-        - Am: xarray of bin-averaged mesoscale correction factors for each turbine (wt, wd, zL) 
-        - Pfree_obs: xarray of bin-averaged observed "freestream" gross power from scada (wt, wd, zL)
-        - Pfree_obs_std: xarray of bin standard deviation observed "freestream" gross power from scada (wt, wd, zL)
-    """
-    
-    try:
-        Nwt, Nwd, NzL = [len(dim) for dim in bins_label] 
-        wt_label, WDbins_label, zLbins_label = bins_label
-
-        Pfree_obs = xarray_init(['wt','wd','zL'],bins_label)
-        Pfree_obs_std = xarray_init(['wt','wd','zL'],bins_label)
-
-        ts = pd.read_csv(file_obs, index_col = 'time')
-        times = netCDF4.num2date(ts.index,'seconds since 1970-01-01 00:00:00.00 UTC, calendar=gregorian')
-        ts['time'] = times
-        ts.set_index('time',inplace=True)
-        ts = ts[wt_label] 
-        Pfree_obs, Pfree_obs_std = bin_avrg(ts,binmap,bins_label)
-        Am = Pfree_obs/P_meso   
-        if savefile == True:
-            Am.to_netcdf('./inputs/' + file_Am)
-    except IOError:
-        print ("No freestream data is available. Am loaded from ./inputs/%s " % (file_Am))
-        Am = xr.open_dataset('./inputs/' + file_Am)
-        Pfree_obs, Pfree_obs_std = None
-    
-    # Compute the total bias correction as a weighted averaged sum of all bins  
-    Am_global = Am.mean(axis=0)
-    Am_global_df = Am_global.to_dataframe(name = 'Am').unstack()
-    Am_global_df.columns = Am_global_df.columns.get_level_values(1)
-    Am_global_df = Am_global_df[['u','n','s']]
-    Am_total = (Am_global_df*N_WDzL/N_WDzL.sum().sum()).sum().sum()
-    print ("Total mesoscale bias correction = %.3f" % (Am_total))
-    
-    if plot:
-        with sns.axes_style("darkgrid"):        
-            Am_pd = pd.concat([Am[i,:,:].to_pandas() for i in range(Am.shape[2])])
-            Am_pd.reset_index(level=0, inplace=True)
-            Am_pd = pd.melt(Am_pd, id_vars=['wd'], value_vars=zLbins_label)
-            Am_pd.rename(columns={'value':'Am'}, inplace=True)
-            fig, ax = plt.subplots(figsize=(10,6))
-            ax = sns.barplot(x='wd', y='Am', hue='zL', data=Am_pd, palette = 'bwr_r',
-                             edgecolor='grey',saturation=1) 
-            ax.grid(True)
-            ax.set_title('Wind farm mesoscale bias correction factor $A_M$')
-            ax.legend(loc = 'upper left', bbox_to_anchor=(1, 1));
-            sns.axes_style("white")
-            
-    return Am, Pfree_obs, Pfree_obs_std
 
 def read_input(file,datefrom,dateto,flags,variables):
     """
