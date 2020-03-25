@@ -22,6 +22,7 @@ from shapely.geometry import Point, LineString
 from tqdm import tqdm
 import math
 from scipy.linalg import lstsq
+import os.path
 
 def Afreestream(P_gross,P,sims,bins,bins_label,turbines):
     """
@@ -76,7 +77,7 @@ def Ameso(file_obs,N_WDzL,binmap,bins_label,P_meso,file_Am,savefile = False, plo
     """
     Compute/load and plot bin-averaged mesoscale correction factors 
     Inputs: 
-        - file_obs: path to observed freestream power csv file
+        - file_obs: path to observed freestream power csv (time-series) or nc (bin-averages) file
         - N_WDzL: dataframe wind bin sample count per wd and zL 
         - binmap: list of timestamp indices to samples in each bin (wd,zL)
         - P_meso: xarray of bin-averaged background gross power from mesoscale (wt, wd, zL)
@@ -89,28 +90,32 @@ def Ameso(file_obs,N_WDzL,binmap,bins_label,P_meso,file_Am,savefile = False, plo
         - Pfree_obs_std: xarray of bin standard deviation observed "freestream" gross power from scada (wt, wd, zL)
     """
     
-    try:
-        Nwt, Nwd, NzL = [len(dim) for dim in bins_label] 
-        wt_label, WDbins_label, zLbins_label = bins_label
-
-        Pfree_obs = xarray_init(['wt','wd','zL'],bins_label)
-        Pfree_obs_std = xarray_init(['wt','wd','zL'],bins_label)
-
-        ts = pd.read_csv(file_obs, index_col = 'time')
-        times = netCDF4.num2date(ts.index,'seconds since 1970-01-01 00:00:00.00 UTC, calendar=gregorian')
-        ts['time'] = times
-        ts.set_index('time',inplace=True)
-        ts = ts[wt_label] 
-        Pfree_obs, Pfree_obs_std = bin_avrg(ts,binmap,bins_label)
-        Am = Pfree_obs/P_meso   
-        if savefile == True:
-            Am.to_netcdf('./inputs/' + file_Am)
-    except IOError:
+    Pfree_obs = xarray_init(['wt','wd','zL'],bins_label)
+    Pfree_obs_std = xarray_init(['wt','wd','zL'],bins_label)
+    Nwt, Nwd, NzL = [len(dim) for dim in bins_label] 
+    wt_label, WDbins_label, zLbins_label = bins_label
+    if os.path.isfile(file_obs): 
+        filename, file_extension = os.path.splitext(file_obs)
+        if file_extension == '.nc':
+            Pfree_obs = xr.open_dataarray(filename + file_extension)
+            Pfree_obs_std = xr.open_dataarray(filename + '_std'+ file_extension)
+            validation_data = True
+        elif file_extension == '.csv':        
+            ts = pd.read_csv(file_obs, index_col = 'time')
+            times = netCDF4.num2date(ts.index,'seconds since 1970-01-01 00:00:00.00 UTC, calendar=gregorian')
+            ts['time'] = times
+            ts.set_index('time',inplace=True)
+            ts = ts[wt_label] 
+            Pfree_obs, Pfree_obs_std = bin_avrg(ts,binmap,bins_label)
+    else:
         print ("No freestream data is available. Am loaded from ./inputs/%s " % (file_Am))
         Am = xr.open_dataset('./inputs/' + file_Am)
         Pfree_obs, Pfree_obs_std = None
     
     # Compute the total bias correction as a weighted averaged sum of all bins  
+    Am = Pfree_obs/P_meso   
+    if savefile == True:
+        Am.to_netcdf('./inputs/' + file_Am)
     Am_global = Am.mean(axis=0)
     Am_global_df = Am_global.to_dataframe(name = 'Am').unstack()
     Am_global_df.columns = Am_global_df.columns.get_level_values(1)
@@ -931,7 +936,7 @@ def read_obs(file_obs,binmap,bins_label):
     """
     Read time-series of observed power data from csv file and return bin-averaged quantities
     Inputs: 
-        - file_obs: path to csv file
+        - file_obs: path to csv (time-series) or nc (bin-averages) file
         - binmap: list of timestamp indices to samples in each bin (wd,zL)
         - bins_label: list of lists of labels for each bin 
     Outputs: 
@@ -939,23 +944,30 @@ def read_obs(file_obs,binmap,bins_label):
         - P_obs_std: xarray of bin standard deviation of observed power at each turbine (wt, wd, zL)
         - validation_data: flag indicating if the file exists or not
     """
- 
-    try:
-        Nwt, Nwd, NzL = [len(dim) for dim in bins_label] 
-        wt_label, WDbins_label, zLbins_label = bins_label
-        
-        # initialize outputs
-        P_obs = xarray_init(['wt','wd','zL'],bins_label)
-        P_obs_std = xarray_init(['wt','wd','zL'],bins_label)
+    P_obs = xarray_init(['wt','wd','zL'],bins_label)
+    P_obs_std = xarray_init(['wt','wd','zL'],bins_label)
+    if os.path.isfile(file_obs): 
+        filename, file_extension = os.path.splitext(file_obs)
+        if file_extension == '.nc':
+            P_obs = xr.open_dataarray(filename + file_extension)
+            P_obs_std = xr.open_dataarray(filename + '_std'+ file_extension)
+            validation_data = True
+        elif file_extension == '.csv':        
+            Nwt, Nwd, NzL = [len(dim) for dim in bins_label] 
+            wt_label, WDbins_label, zLbins_label = bins_label
 
-        ts = pd.read_csv(file_obs, index_col = 'time')
-        times = netCDF4.num2date(ts.index,'seconds since 1970-01-01 00:00:00.00 UTC, calendar=gregorian')
-        ts['time'] = times
-        ts.set_index('time',inplace=True)
-        ts = ts[wt_label] 
-        P_obs, P_obs_std = bin_avrg(ts,binmap,bins_label)
-        validation_data = True
-    except IOError:
+            # initialize outputs
+            P_obs = xarray_init(['wt','wd','zL'],bins_label)
+            P_obs_std = xarray_init(['wt','wd','zL'],bins_label)
+
+            ts = pd.read_csv(file_obs, index_col = 'time')
+            times = netCDF4.num2date(ts.index,'seconds since 1970-01-01 00:00:00.00 UTC, calendar=gregorian')
+            ts['time'] = times
+            ts.set_index('time',inplace=True)
+            ts = ts[wt_label] 
+            P_obs, P_obs_std = bin_avrg(ts,binmap,bins_label)
+            validation_data = True
+    else:
         print ("No validation data available")
         validation_data = False
         

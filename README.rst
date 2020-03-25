@@ -40,7 +40,11 @@ We use Jupyter notebooks based on Python 3. We recomend the `Anaconda distributi
 
 Dependencies
 ============
-The libraries used by the notebooks can be found in requirements.txt 
+The libraries used by the notebooks can be installed with 
+
+```bash
+pip install -r requirements.txt
+```
 
 License
 =======
