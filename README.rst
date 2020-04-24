@@ -25,8 +25,7 @@ The following blog posts were used to guide benchmark participants:
 
 Data
 ====================
-Benchmark input data and simulation data is published open-access in the following data repository:
-https://b2drop.eudat.eu/s/6C8CgyqZe3E3btq 
+Benchmark input data and simulation data is published open-access in the following data repository: 
 
 Citation
 ========
