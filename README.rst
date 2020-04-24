@@ -1,11 +1,11 @@
 OWA Wake Modeling Challenge
 -------------------------------------
-`Javier Sanz Rodrigo <mailto:jsrodrigo@cener.com>`_, `Pawel Gancarski <mailto:pgancarski@cener.com>`_, `Fernando Borbón Guillén <mailto:fborbon@cener.com>`_, `Pedro Miguel Fernandes Correia <mailto:pmferandez@cener.com>`_
+`Javier Sanz Rodrigo <mailto:jsrodrigo@cener.com>`_, `Pawel Gancarski <mailto:pgancarski@cener.com>`_, `Pedro Miguel Fernandes Correia <mailto:pmferandez@cener.com>`_
 
 
 Background 
 =========================
-The `OWA Wake Modeling Challenge <https://www.carbontrust.com/media/677495/owa-wake-modelling-challenge_final-feb27.pdf>`_ is an Offshore Wind Accelerator (OWA) project that aims to improve confidence in wake models in the prediction of array efficiency. A benchmarking process comprising 5 wind farms allows wake model developers and end-users test their array efficiency prediction methodologies over a wide range of wind climate and wind farm layout conditions.
+The `Offshore Wind Accelerator <hhttps://www.carbontrust.com/es/node/981>`_ (OWA) Wake Modeling Challenge aims to improve confidence in wake models in the prediction of array efficiency. A benchmarking process comprising 5 wind farms allows wake model developers and end-users test their array efficiency prediction methodologies over a wide range of wind climate and wind farm layout conditions.
 
 The project is integrated in the Phase 3 of the `IEA Task 31 Wakebench <https://community.ieawind.org/task31/home>`_ international framework for wind farm modeling and evaluation.
 
@@ -51,3 +51,6 @@ License
 Copyright 2020 CENER
 Licensed under the GNU General Public License v3.0
 
+Acknowledgements
+================
+The authors would like to thank Carbon Trust and the OWA Technical Working Group for their support providing funding, operational data and guidance throughout the project. We would like to thank all the benchmark participants for their simulations and in-kind support in fine-tuning the benchmark set-up and evaluation methodology.
