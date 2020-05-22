@@ -31,7 +31,7 @@ Citation
 ========
 You can cite the github repo in the following way:
 
-OWAbench. Version 2.0 (2020) https://github.com/CENER-EPR/OWAbench
+Sanz Rodrigo J., Gancarski P. and Fernandes Correia P. M. (2020). OWA Wake Modelling Challenge (Version v2.0.1). Zenodo. http://doi.org/10.5281/zenodo.3773129
 
 Installation
 ============
@@ -52,4 +52,4 @@ Licensed under the GNU General Public License v3.0
 
 Acknowledgements
 ================
-The authors would like to thank Carbon Trust and the OWA Technical Working Group for their support providing funding, operational data and guidance throughout the project. We would like to thank all the benchmark participants for their simulations and in-kind support in fine-tuning the benchmark set-up and evaluation methodology.
+The authors would like to thank Carbon Trust and the OWA Technical Working Group for their support providing funding, operational data and guidance throughout the project. We would like to thank all the benchmark participants for their simulations and in-kind support in fine-tuning the benchmark set-up and evaluation methodology as well as submitting simulation outputs.
